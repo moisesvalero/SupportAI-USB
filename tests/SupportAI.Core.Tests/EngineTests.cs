@@ -108,4 +108,94 @@ public class EngineTests
 
         Assert.Contains(prob, p => p.Gravedad == Gravedad.Bajo && p.Titulo.Contains("reiniciar"));
     }
+
+    [Fact]
+    public void Analyze_NoInternet_DetectsProblem()
+    {
+        var diag = new Diagnostico
+        {
+            Red = new NetworkInfo { Internet = false, DNS = "8.8.8.8" }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.Contains(prob, p => p.Modulo == "Red" && p.Titulo.Contains("Internet"));
+    }
+
+    [Fact]
+    public void Analyze_NoDns_DetectsProblem()
+    {
+        var diag = new Diagnostico
+        {
+            Red = new NetworkInfo { Internet = true, DNS = "" }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.Contains(prob, p => p.Modulo == "Red" && p.Titulo.Contains("DNS"));
+    }
+
+    [Fact]
+    public void Analyze_DefenderOff_DetectsProblem()
+    {
+        var diag = new Diagnostico
+        {
+            Seguridad = new SecurityInfo { DefenderActivo = false, FirewallActivo = true }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.Contains(prob, p => p.Modulo == "Seguridad" && p.Titulo.Contains("Defender"));
+    }
+
+    [Fact]
+    public void Analyze_FirewallOff_DetectsProblem()
+    {
+        var diag = new Diagnostico
+        {
+            Seguridad = new SecurityInfo { DefenderActivo = true, FirewallActivo = false }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.Contains(prob, p => p.Modulo == "Seguridad" && p.Titulo.Contains("Firewall"));
+    }
+
+    [Fact]
+    public void Analyze_DriverErrors_DetectsProblem()
+    {
+        var diag = new Diagnostico
+        {
+            Drivers = new DriverInfo
+            {
+                DispositivosError = [new DispositivoErrorInfo { Nombre = "GPU", CodigoError = 43, Descripcion = "Error" }]
+            }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.Contains(prob, p => p.Modulo == "Drivers" && p.Titulo.Contains("errores"));
+    }
+
+    [Fact]
+    public void Analyze_HealthyNetwork_NoProblems()
+    {
+        var diag = new Diagnostico
+        {
+            Red = new NetworkInfo { Internet = true, DNS = "1.1.1.1" },
+            Seguridad = new SecurityInfo { DefenderActivo = true, FirewallActivo = true },
+            Drivers = new DriverInfo { DispositivosError = [] },
+            Salud = new HealthInfo { RamLibreMB = 8000, RamTotalMB = 16000 },
+            Hardware = new HardwareInfo
+            {
+                DiscosLogicos = [new DiscoLogicoInfo { Letra = "C:", SizeBytes = 256_000_000_000, FreeBytes = 128_000_000_000 }]
+            }
+        };
+
+        var (prob, _) = DiagnosticEngine.Analyze(diag);
+
+        Assert.DoesNotContain(prob, p => p.Modulo == "Red");
+        Assert.DoesNotContain(prob, p => p.Modulo == "Seguridad");
+        Assert.DoesNotContain(prob, p => p.Modulo == "Drivers");
+    }
 }

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SupportAI.Core\SupportAI.Core.csproj" />
+    <ProjectReference Include="..\..\src\SupportAI.Ia\SupportAI.Ia.csproj" />
   </ItemGroup>
 
 </Project>
