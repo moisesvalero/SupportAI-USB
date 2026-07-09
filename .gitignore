@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.log
+*.vs/
+*.DotSettings.user
+
+# Build
+packages/
+*.nupkg
+
+# IDE
+.idea/
+.vscode/
+
+# USB tool
+logs/
+diagnosticos/
+informes/
+/models/
+tools/*.exe
+
+# Environment
+.env
+*.env.local

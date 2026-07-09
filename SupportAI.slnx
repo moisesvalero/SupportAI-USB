@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SupportAI.Cli/SupportAI.Cli.csproj" />
+    <Project Path="src/SupportAI.Collectors.Windows/SupportAI.Collectors.Windows.csproj" />
+    <Project Path="src/SupportAI.Core/SupportAI.Core.csproj" />
+    <Project Path="src/SupportAI.Repairs/SupportAI.Repairs.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SupportAI.Core.Tests/SupportAI.Core.Tests.csproj" />
+  </Folder>
+</Solution>
