@@ -26,3 +26,10 @@ tools/*.exe
 # Environment
 .env
 *.env.local
+
+# API keys (NUNCA commitear)
+.OPENROUTER_KEY
+.GEMINI_KEY
+.*_KEY
+*_key.txt
+keys/
