@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/SupportAI.App.Wpf/SupportAI.App.Wpf.csproj" />
     <Project Path="src/SupportAI.Cli/SupportAI.Cli.csproj" />
     <Project Path="src/SupportAI.Collectors.Windows/SupportAI.Collectors.Windows.csproj" />
     <Project Path="src/SupportAI.Core/SupportAI.Core.csproj" />

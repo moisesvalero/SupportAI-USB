@@ -7,6 +7,12 @@ public static class RepairCatalog
         new DnsFlushRepair(),
         new TempCleanRepair(),
         new ExplorerRestartRepair(),
+        new SfcRepair(),
+        new DismRepair(),
+        new WinsockResetRepair(),
+        new SpoolerResetRepair(),
+        new WuResetRepair(),
+        new RestorePointRepair(),
     ];
 
     public static IReadOnlyList<IRepairAction> All => Repairs.AsReadOnly();
