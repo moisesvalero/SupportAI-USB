@@ -40,7 +40,59 @@ public static class PrivacyFilter
             };
         }
 
-        return diag with { Hardware = hw, Red = red };
+        var salud = diag.Salud;
+        if (salud is not null)
+        {
+            salud = salud with
+            {
+                ProgramasInicio = salud.ProgramasInicio.Select(p => p with
+                {
+                    Nombre = CleanPii(p.Nombre),
+                    Comando = CleanPii(p.Comando),
+                    Ubicacion = CleanPii(p.Ubicacion)
+                }).ToList()
+            };
+        }
+
+        var windows = diag.Windows;
+        if (windows is not null)
+        {
+            windows = windows with
+            {
+                EventosCriticos = windows.EventosCriticos.Select(e => e with
+                {
+                    Fuente = CleanPii(e.Fuente),
+                    Mensaje = CleanPii(e.Mensaje)
+                }).ToList()
+            };
+        }
+
+        return diag with { Hardware = hw, Red = red, Salud = salud, Windows = windows };
+    }
+
+    private static string CleanPii(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+
+        // 1. Rutas de perfiles de usuario: C:\Users\<usuario>... -> C:\Users\[USER]...
+        text = Regex.Replace(text, @"(?i)c:\\users\\[^\\]+", @"C:\Users\[USER]");
+
+        // 2. Nombre del usuario actual suelto
+        text = text.Replace(Environment.UserName, "[USER]", StringComparison.OrdinalIgnoreCase);
+
+        // 3. Nombre del equipo actual suelto
+        text = text.Replace(Environment.MachineName, "[COMPUTER]", StringComparison.OrdinalIgnoreCase);
+
+        // 4. Dominio del usuario actual suelto
+        var domain = Environment.UserDomainName;
+        if (!string.IsNullOrEmpty(domain) &&
+            !domain.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
+            !domain.Equals("WORKGROUP", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text.Replace(domain, "[DOMAIN]", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return text;
     }
 
     private static string AnonymizeSerial(string value)
