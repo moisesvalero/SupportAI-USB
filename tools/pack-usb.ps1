@@ -9,7 +9,7 @@ $publishDir = Join-Path $root "src\SupportAI.Cli\bin\Release\net10.0-windows\win
 
 if (-not $SkipBuild) {
     Write-Host "Publicando SupportAI single-file..." -ForegroundColor Cyan
-    dotnet publish $root\src\SupportAI.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:ReadyToRun=true -p:DebugType=none
+    dotnet publish $root\src\SupportAI.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -p:ReadyToRun=true -p:DebugType=none
     if (-not $?) { throw "Build falló" }
 }
 
