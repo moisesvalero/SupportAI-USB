@@ -24,6 +24,12 @@ public class LlmService
             _providers.Insert(0, gguf);
     }
 
+    public LlmService(List<ILlmProvider> providers, RulesProvider rules)
+    {
+        _providers = providers;
+        _rules = rules;
+    }
+
     public string ModoActual =>
         _providers.FirstOrDefault(p => p is not RulesProvider)?.Name ?? "Reglas locales";
 
@@ -40,12 +46,14 @@ public class LlmService
             try
             {
                 var result = await provider.AnalyzeAsync(anonymized, ct);
-                if (result.Recomendaciones.Count > 0)
+                if (!string.IsNullOrWhiteSpace(result.Explicacion))
                     return result with { ProveedorUsado = provider.Name };
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                continue;
+                System.Diagnostics.Trace.WriteLine($"[LlmService] Error al analizar con {provider.Name}: {ex.Message}");
+                if (ct.IsCancellationRequested && (ex is OperationCanceledException || ex is TaskCanceledException))
+                    throw;
             }
         }
 

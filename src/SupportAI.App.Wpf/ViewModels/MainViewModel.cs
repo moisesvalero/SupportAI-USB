@@ -15,6 +15,8 @@ public class MainViewModel : INotifyPropertyChanged
     private LlmService? _llm;
     private Diagnostico _diagnostico = new();
     private bool _iaConsent;
+    private bool _reparando;
+    private CancellationTokenSource? _repairCts;
 
     public MainViewModel()
     {
@@ -22,15 +24,32 @@ public class MainViewModel : INotifyPropertyChanged
         ExportPdfCommand = new AsyncRelayCommand(async _ => await ExportPdfAsync());
         AnalyzeWithIaCommand = new AsyncRelayCommand(async _ => await AnalyzeWithIaAsync());
         RepairCommand = new RelayCommand(ExecuteRepair);
+        CancelRepairCommand = new RelayCommand(_ => CancelRepair());
         DownloadModelCommand = new RelayCommand(_ => DownloadModel());
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
+
+        // Timer para refrescar el estado del modelo en segundo plano
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(3)
+        };
+        timer.Tick += (s, e) =>
+        {
+            RefreshModelStatus();
+            if (ModeloDescargado)
+            {
+                timer.Stop();
+            }
+        };
+        timer.Start();
     }
 
     public ICommand ScanCommand { get; }
     public ICommand ExportPdfCommand { get; }
     public ICommand AnalyzeWithIaCommand { get; }
     public ICommand RepairCommand { get; }
+    public ICommand CancelRepairCommand { get; }
     public ICommand DownloadModelCommand { get; }
 
     private string _statusText = "";
@@ -67,7 +86,21 @@ public class MainViewModel : INotifyPropertyChanged
         set { _iaConsent = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
     }
 
-    public bool PuedeAnalizarConIa => _iaConsent && TieneDatos;
+    public bool PuedeAnalizarConIa => _iaConsent && TieneDatos && !_iaCargando && !_reparando;
+
+    public bool Reparando
+    {
+        get => _reparando;
+        set
+        {
+            _reparando = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PuedeReparar));
+            OnPropertyChanged(nameof(PuedeAnalizarConIa));
+        }
+    }
+
+    public bool PuedeReparar => !_reparando;
 
     public List<ModuloCheck> Modulos { get; set; } = [];
     public List<Problema> Problemas { get; set; } = [];
@@ -192,21 +225,48 @@ public class MainViewModel : INotifyPropertyChanged
         return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
     }
 
-    private void ExecuteRepair(object? parameter)
+    private async void ExecuteRepair(object? parameter)
     {
         if (parameter is not string id) return;
+        if (Reparando) return;
+
         var repair = RepairCatalog.Get(id);
         if (repair is null) return;
 
+        Reparando = true;
         StatusText = $"Ejecutando: {repair.Titulo}...";
-        _ = Task.Run(async () =>
+        _repairCts = new CancellationTokenSource();
+
+        try
         {
-            var result = await repair.ExecuteAsync();
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                StatusText = result.Success
-                    ? $"✅ {repair.Titulo} completado."
-                    : $"❌ {repair.Titulo} falló: {result.Error}");
-        });
+            var result = await Task.Run(async () => await repair.ExecuteAsync(ct: _repairCts.Token), _repairCts.Token);
+            StatusText = result.Success
+                ? $"✅ {repair.Titulo} completado."
+                : $"❌ {repair.Titulo} falló: {result.Error}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = $"⏹️ {repair.Titulo} cancelado por el usuario.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ {repair.Titulo} falló: {ex.Message}";
+        }
+        finally
+        {
+            _repairCts?.Dispose();
+            _repairCts = null;
+            Reparando = false;
+        }
+    }
+
+    private void CancelRepair()
+    {
+        if (_repairCts is not null && !_repairCts.IsCancellationRequested)
+        {
+            StatusText = "Cancelando reparación...";
+            _repairCts.Cancel();
+        }
     }
 
     private async Task ExportPdfAsync()

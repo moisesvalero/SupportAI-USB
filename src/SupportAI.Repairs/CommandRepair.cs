@@ -11,7 +11,7 @@ public abstract class CommandRepair : IRepairAction
     protected virtual string FileName => "powershell.exe";
     protected virtual string Arguments => $"-NoProfile -ExecutionPolicy Bypass -Command \"{Comando.Replace("\"", "\\\"")}\"";
 
-    public async Task<RepairResult> ExecuteAsync(bool dryRun = false)
+    public virtual async Task<RepairResult> ExecuteAsync(bool dryRun = false, CancellationToken ct = default)
     {
         if (dryRun)
             return new RepairResult(true, $"[Dry-run] {Comando}");
@@ -27,9 +27,9 @@ public abstract class CommandRepair : IRepairAction
         };
         using var process = new Process { StartInfo = psi };
         process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
+        var output = await process.StandardOutput.ReadToEndAsync(ct);
+        var error = await process.StandardError.ReadToEndAsync(ct);
+        await process.WaitForExitAsync(ct);
         return RepairResult.FromProcess(process.ExitCode, output, error);
     }
 }

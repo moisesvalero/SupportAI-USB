@@ -2,14 +2,14 @@ using System.Diagnostics;
 
 namespace SupportAI.Repairs;
 
-public class ExplorerRestartRepair : IRepairAction
+public class ExplorerRestartRepair : CommandRepair
 {
-    public string Id => "rep.explorer.restart";
-    public string Titulo => "Reiniciar Explorer";
-    public string Descripcion => "Reinicia el proceso Explorer.exe (interfaz de Windows). Útil tras cambios de registro o cuelgues de interfaz.";
-    public string Comando => "taskkill /f /im explorer.exe & start explorer.exe";
+    public override string Id => "rep.explorer.restart";
+    public override string Titulo => "Reiniciar Explorer";
+    public override string Descripcion => "Reinicia el proceso Explorer.exe (interfaz de Windows). Útil tras cambios de registro o cuelgues de interfaz.";
+    public override string Comando => "taskkill /f /im explorer.exe & start explorer.exe";
 
-    public async Task<RepairResult> ExecuteAsync(bool dryRun = false)
+    public override async Task<RepairResult> ExecuteAsync(bool dryRun = false, CancellationToken ct = default)
     {
         if (dryRun)
             return new RepairResult(true, $"[Dry-run] {Comando}");
@@ -26,7 +26,7 @@ public class ExplorerRestartRepair : IRepairAction
         };
         using var killProcess = new Process { StartInfo = psiKill };
         killProcess.Start();
-        await killProcess.WaitForExitAsync();
+        await killProcess.WaitForExitAsync(ct);
 
         // Start explorer
         var psiStart = new ProcessStartInfo

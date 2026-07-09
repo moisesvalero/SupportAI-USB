@@ -6,16 +6,12 @@ namespace SupportAI.Ia;
 
 public class OpenRouterProvider : ILlmProvider
 {
-    private readonly HttpClient _http;
+    private static readonly HttpClient _sharedHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
     private readonly string _apiKey;
 
     public OpenRouterProvider(string apiKey)
     {
         _apiKey = apiKey;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-        _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-        _http.DefaultRequestHeaders.Add("HTTP-Referer", "https://supportai-usb.local");
-        _http.DefaultRequestHeaders.Add("X-OpenRouter-Title", "SupportAI USB");
     }
 
     public string Name => "OpenRouter";
@@ -36,8 +32,34 @@ public class OpenRouterProvider : ILlmProvider
             temperature = 0.3
         };
 
-        var response = await _http.PostAsJsonAsync(
-            "https://openrouter.ai/api/v1/chat/completions", body, ct);
+        HttpResponseMessage? response = null;
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions")
+            {
+                Content = JsonContent.Create(body)
+            };
+            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+            request.Headers.Add("HTTP-Referer", "https://supportai-usb.local");
+            request.Headers.Add("X-OpenRouter-Title", "SupportAI USB");
+
+            response = await _sharedHttp.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+                break;
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), ct);
+                continue;
+            }
+
+            break;
+        }
+
+        if (response == null)
+            throw new InvalidOperationException("No se pudo obtener respuesta de OpenRouter.");
+
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync<OpenRouterResponse>(ct);
@@ -69,7 +91,7 @@ Diagnóstico:
         return template + json;
     }
 
-    internal static LlmResponse ParseResponseStatic(string json, string provider)
+    public static LlmResponse ParseResponseStatic(string json, string provider)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
