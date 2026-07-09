@@ -22,13 +22,16 @@ public class MainViewModel : INotifyPropertyChanged
         ExportPdfCommand = new AsyncRelayCommand(async _ => await ExportPdfAsync());
         AnalyzeWithIaCommand = new AsyncRelayCommand(async _ => await AnalyzeWithIaAsync());
         RepairCommand = new RelayCommand(ExecuteRepair);
+        DownloadModelCommand = new RelayCommand(_ => DownloadModel());
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
+        RefreshModelStatus();
     }
 
     public ICommand ScanCommand { get; }
     public ICommand ExportPdfCommand { get; }
     public ICommand AnalyzeWithIaCommand { get; }
     public ICommand RepairCommand { get; }
+    public ICommand DownloadModelCommand { get; }
 
     private string _statusText = "";
     public string StatusText
@@ -100,6 +103,34 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _iaCargando;
         set { _iaCargando = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
+    }
+
+    private string _modelStatus = "";
+    public string ModelStatus
+    {
+        get => _modelStatus;
+        set { _modelStatus = value; OnPropertyChanged(); OnPropertyChanged(nameof(ModelListo)); }
+    }
+    public bool ModelListo => ModeloDescargado;
+    private static bool ModeloDescargado => ModelDownloader.ModelExists;
+
+    private void DownloadModel()
+    {
+        RefreshModelStatus();
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = ModelDownloader.LlamaCppUrl,
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    private void RefreshModelStatus()
+    {
+        ModelStatus = ModelDownloader.GetStatus();
     }
 
     public async Task ScanAsync()

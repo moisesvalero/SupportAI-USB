@@ -148,6 +148,13 @@
                                     HorizontalAlignment="Center"/>
                             <TextBlock Text="{Binding IaProvider, StringFormat='Proveedor: {0}', TargetNullValue='Reglas offline'}" 
                                        FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
+                            <Separator Background="#ecf0f1" Height="1" Margin="0,8,0,6"/>
+                            <TextBlock Text="Modelo local (GGUF)" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ModelStatus}" FontSize="10" Foreground="#7f8c8d" TextWrapping="Wrap"/>
+                            <Button Content="Descargar llama.cpp + modelo" Command="{Binding DownloadModelCommand}"
+                                    FontSize="10" Padding="8,4" Background="#7f8c8d" Foreground="White"
+                                    BorderThickness="0" Cursor="Hand"
+                                    HorizontalAlignment="Left" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

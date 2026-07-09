@@ -18,6 +18,10 @@ public class LlmService
             _providers.Add(new GeminiProvider(geminiKey));
 
         _providers.Add(_rules);
+
+        var gguf = new GgufProvider();
+        if (gguf.Disponible)
+            _providers.Insert(0, gguf);
     }
 
     public string ModoActual =>
@@ -45,6 +49,6 @@ public class LlmService
             }
         }
 
-        return await _rules.AnalyzeAsync(diag, ct);
+        return await _rules.AnalyzeAsync(anonymized, ct);
     }
 }
