@@ -73,4 +73,62 @@ public class PrivacyFilterTests
         Assert.Equal(17179869184, result.Hardware?.RAM?.TotalBytes);
         Assert.Equal("Intel i7", result.Hardware?.CPU?.Nombre);
     }
+
+    [Fact]
+    public void Anonymize_ReplacesPiiInStartupAndEvents()
+    {
+        var username = Environment.UserName;
+        var machineName = Environment.MachineName;
+        var domainName = Environment.UserDomainName;
+
+        var diag = new Diagnostico
+        {
+            Salud = new HealthInfo
+            {
+                ProgramasInicio =
+                [
+                    new StartupInfo
+                    {
+                        Nombre = "MaliciousApp",
+                        Comando = $@"C:\Users\{username}\AppData\Local\Temp\malicious.exe --user={username}",
+                        Ubicacion = $@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+                    }
+                ]
+            },
+            Windows = new WindowsInfo
+            {
+                EventosCriticos =
+                [
+                    new EventoInfo
+                    {
+                        Fuente = "DCOM",
+                        Mensaje = $"El servidor no pudo registrarse en DCOM con el equipo {machineName} de {domainName}"
+                    }
+                ]
+            }
+        };
+
+        var result = PrivacyFilter.Anonymize(diag);
+
+        // Verificaciones
+        Assert.NotNull(result.Salud);
+        Assert.Single(result.Salud.ProgramasInicio);
+        var startup = result.Salud.ProgramasInicio[0];
+        Assert.Contains(@"C:\Users\[USER]\AppData\Local\Temp\malicious.exe", startup.Comando);
+        Assert.DoesNotContain(username, startup.Comando, StringComparison.OrdinalIgnoreCase);
+
+        Assert.NotNull(result.Windows);
+        Assert.Single(result.Windows.EventosCriticos);
+        var ev = result.Windows.EventosCriticos[0];
+        Assert.Contains("[COMPUTER]", ev.Mensaje);
+        Assert.DoesNotContain(machineName, ev.Mensaje, StringComparison.OrdinalIgnoreCase);
+        
+        if (!string.IsNullOrEmpty(domainName) && 
+            !domainName.Equals(machineName, StringComparison.OrdinalIgnoreCase) && 
+            !domainName.Equals("WORKGROUP", StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Contains("[DOMAIN]", ev.Mensaje);
+            Assert.DoesNotContain(domainName, ev.Mensaje, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 }

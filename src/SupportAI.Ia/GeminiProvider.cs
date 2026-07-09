@@ -6,13 +6,12 @@ namespace SupportAI.Ia;
 
 public class GeminiProvider : ILlmProvider
 {
+    private static readonly HttpClient _sharedHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
     private readonly string _apiKey;
-    private readonly HttpClient _http;
 
     public GeminiProvider(string apiKey)
     {
         _apiKey = apiKey;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
     }
 
     public string Name => "Gemini (Google)";
@@ -21,7 +20,7 @@ public class GeminiProvider : ILlmProvider
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var prompt = BuildPrompt(diag);
-        var url = $"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={_apiKey}";
+        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
 
         var body = new
         {
@@ -39,7 +38,32 @@ public class GeminiProvider : ILlmProvider
             }
         };
 
-        var response = await _http.PostAsJsonAsync(url, body, ct);
+        HttpResponseMessage? response = null;
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(body)
+            };
+            request.Headers.Add("x-goog-api-key", _apiKey);
+
+            response = await _sharedHttp.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+                break;
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), ct);
+                continue;
+            }
+
+            break;
+        }
+
+        if (response == null)
+            throw new InvalidOperationException("No se pudo obtener respuesta de Gemini.");
+
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync<GeminiResponse>(ct);

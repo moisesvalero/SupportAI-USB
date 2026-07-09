@@ -43,28 +43,48 @@ public class GgufProvider : ILlmProvider
 Datos:
 """;
         var prompt = promptTemplate + json + "\n[/INST]";
+        var tempFile = Path.Combine(Path.GetTempPath(), $"llama_prompt_{Guid.NewGuid()}.txt");
 
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName = LlamaCliPath,
-            Arguments = $"-m \"{modelPath}\" -p \"{prompt.Replace("\"", "\\\"")}\" -n 1000 --temp 0.3 --no-display-prompt",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
+            await File.WriteAllTextAsync(tempFile, prompt, ct);
 
-        using var process = new Process { StartInfo = psi };
-        process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+            var psi = new ProcessStartInfo
+            {
+                FileName = LlamaCliPath,
+                Arguments = $"-m \"{modelPath}\" -f \"{tempFile}\" -n 1000 --temp 0.3 --no-display-prompt",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
 
-        var jsonStart = output.IndexOf('{');
-        var jsonEnd = output.LastIndexOf('}');
-        if (jsonStart < 0 || jsonEnd <= jsonStart)
-            throw new InvalidOperationException("No se pudo parsear la respuesta del modelo.");
+            using var process = new Process { StartInfo = psi };
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
 
-        output = output[jsonStart..(jsonEnd + 1)];
-        return OpenRouterProvider.ParseResponseStatic(output, Name);
+            var jsonStart = output.IndexOf('{');
+            var jsonEnd = output.LastIndexOf('}');
+            if (jsonStart < 0 || jsonEnd <= jsonStart)
+                throw new InvalidOperationException("No se pudo parsear la respuesta del modelo.");
+
+            output = output[jsonStart..(jsonEnd + 1)];
+            return OpenRouterProvider.ParseResponseStatic(output, Name);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+            {
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch
+                {
+                    // Ignorar errores al borrar el archivo temporal
+                }
+            }
+        }
     }
 }

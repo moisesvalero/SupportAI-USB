@@ -27,6 +27,22 @@ public class PowerShellEngine
     {
         return """
 $ErrorActionPreference = 'SilentlyContinue'
+$os = Get-CimInstance Win32_OperatingSystem
+
+$updatePendiente = $false
+try {
+    $updateSession = New-Object -ComObject Microsoft.Update.Session
+    $updateSearcher = $updateSession.CreateUpdateSearcher()
+    $searchResult = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0")
+    $updatePendiente = $searchResult.Updates.Count -gt 0
+} catch {}
+
+$archivosCorruptos = $false
+try {
+    $dismOut = Dism /Online /Cleanup-Image /CheckHealth
+    if ($dismOut -match "reparable|corrupt") { $archivosCorruptos = $true }
+} catch {}
+
 $r = [PSCustomObject]@{
     hardware = [PSCustomObject]@{
         cpu = Get-CimInstance Win32_Processor | Select-Object @{N='nombre';E={$_.Name}}, @{N='nucleos';E={$_.NumberOfCores}}, @{N='hilos';E={$_.NumberOfLogicalProcessors}}, @{N='maxFrecuenciaMHz';E={$_.MaxClockSpeed}}
@@ -36,19 +52,19 @@ $r = [PSCustomObject]@{
         discosLogicos = Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3 | Select-Object @{N='letra';E={$_.DeviceID}}, @{N='sizeBytes';E={$_.Size}}, @{N='freeBytes';E={$_.FreeSpace}}
         bios = Get-CimInstance Win32_BIOS | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='version';E={$_.SMBIOSBIOSVersion}}
         placa = Get-CimInstance Win32_BaseBoard | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='producto';E={$_.Product}}
-        so = Get-CimInstance Win32_OperatingSystem | Select-Object @{N='caption';E={$_.Caption}}, @{N='version';E={$_.Version}}, @{N='build';E={$_.BuildNumber}}, @{N='instalado';E={$_.InstallDate}}, @{N='ultimoArranque';E={$_.LastBootUpTime}}
+        so = $os | Select-Object @{N='caption';E={$_.Caption}}, @{N='version';E={$_.Version}}, @{N='build';E={$_.BuildNumber}}, @{N='instalado';E={if($_.InstallDate){$_.InstallDate.ToString('o')}}}, @{N='ultimoArranque';E={if($_.LastBootUpTime){$_.LastBootUpTime.ToString('o')}}}
     }
     salud = [PSCustomObject]@{
-        diasActivo = [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalDays)
-        horasActivo = [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).Hours)
-        ramLibreMB = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024, 1)
-        ramTotalMB = [math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1024, 1)
+        diasActivo = [math]::Max(0, [int](Get-Date).Subtract($os.LastBootUpTime).TotalDays)
+        horasActivo = [math]::Max(0, [int](Get-Date).Subtract($os.LastBootUpTime).Hours)
+        ramLibreMB = [math]::Round($os.FreePhysicalMemory / 1024, 1)
+        ramTotalMB = [math]::Round($os.TotalVisibleMemorySize / 1024, 1)
         procesosPesados = Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 8 @{N='nombre';E={$_.Name}}, @{N='workingSetMB';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, @{N='pid';E={$_.ProcessId}}
         programasInicio = Get-CimInstance Win32_StartupCommand | Select-Object @{N='nombre';E={$_.Name}}, @{N='comando';E={$_.Command}}, @{N='ubicacion';E={$_.Location}}
     }
     windows = [PSCustomObject]@{
-        updatePendiente = $false
-        archivosCorruptos = $false
+        updatePendiente = $updatePendiente
+        archivosCorruptos = $archivosCorruptos
         serviciosFallando = Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}}
         eventosCriticos = Get-WinEvent -FilterHashtable @{LogName='System';Level=1,2} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{N='id';E={$_.Id}}, @{N='nivel';E={$_.Level}}, @{N='fuente';E={$_.ProviderName}}, @{N='mensaje';E={$_.Message}}, @{N='timestamp';E={$_.TimeCreated}}
     }
@@ -86,9 +102,28 @@ $r | ConvertTo-Json -Depth 5
 
         using var process = new Process { StartInfo = psi };
         process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync(ct);
-        var error = await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+
+        var readOutputTask = process.StandardOutput.ReadToEndAsync(ct);
+        var readErrorTask = process.StandardError.ReadToEndAsync(ct);
+        var processExitTask = process.WaitForExitAsync(ct);
+
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30), ct);
+
+        var completedTask = await Task.WhenAny(processExitTask, timeoutTask);
+        if (completedTask == timeoutTask)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // Ignorar errores al matar el proceso
+            }
+            return null;
+        }
+
+        var output = await readOutputTask;
         return string.IsNullOrEmpty(output) ? null : output.Trim();
     }
 

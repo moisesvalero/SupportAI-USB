@@ -6,7 +6,7 @@ public interface IRepairAction
     string Titulo { get; }
     string Descripcion { get; }
     string Comando { get; }
-    Task<RepairResult> ExecuteAsync(bool dryRun = false);
+    Task<RepairResult> ExecuteAsync(bool dryRun = false, CancellationToken ct = default);
 }
 
 public record RepairResult(bool Success, string Output, string Error = "")
