@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$publishDir = Join-Path $root "src\SupportAI.Cli\bin\Release\net10.0\win-x64\publish"
+$publishDir = Join-Path $root "src\SupportAI.Cli\bin\Release\net10.0-windows\win-x64\publish"
 
 if (-not $SkipBuild) {
     Write-Host "Publicando SupportAI single-file..." -ForegroundColor Cyan
