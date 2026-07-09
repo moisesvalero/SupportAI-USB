@@ -20,7 +20,7 @@ public class GeminiProvider : ILlmProvider
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var prompt = BuildPrompt(diag);
-        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
+        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent";
 
         var body = new
         {

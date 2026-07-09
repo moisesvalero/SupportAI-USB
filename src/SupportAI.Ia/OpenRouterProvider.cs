@@ -22,7 +22,7 @@ public class OpenRouterProvider : ILlmProvider
         var prompt = BuildPrompt(diag);
         var body = new
         {
-            model = "openrouter/free",
+            model = "google/gemini-2.5-flash:free",
             messages = new[]
             {
                 new { role = "system", content = "Eres un técnico experto en diagnóstico de Windows. Analiza los datos y responde SOLO con JSON." },
