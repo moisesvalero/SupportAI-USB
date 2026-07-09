@@ -81,10 +81,16 @@ SupportAI USB includes 9 built-in administrative repair tools:
 
 ### 📦 Creating a Standalone USB Build
 
-To package SupportAI USB into a portable, single-file folder structure suitable for USB drives, execute the pack script:
-```powershell
-tools\pack-usb.ps1
-```
+To package SupportAI USB into a portable, single-file release suitable for USB drives:
+
+1. **Connect your USB drive** to your computer.
+2. **Open PowerShell** in the root of the project.
+3. **Execute the pack script** to build the single-file release:
+   ```powershell
+   .\tools\pack-usb.ps1
+   ```
+4. **Copy all contents** of the generated `USB/` directory directly to the root of your USB drive.
+5. **Add API keys (Optional):** Copy your `.OPENROUTER_KEY` and `.GEMINI_KEY` files to the root of the USB drive, adjacent to `SupportAI.exe`, to enable cloud-based AI.
 
 ---
 
@@ -155,10 +161,16 @@ SupportAI USB incluye 9 herramientas de reparación administrativa integradas:
 
 ### 📦 Crear una Compilación Independiente para USB
 
-Para empaquetar SupportAI USB en una estructura de carpetas portátil de un solo archivo apta para pendrives, ejecuta el script:
-```powershell
-tools\pack-usb.ps1
-```
+Para empaquetar SupportAI USB en una estructura de carpetas portátil de un solo archivo apta para pendrives:
+
+1. **Conecta tu pendrive USB** al ordenador.
+2. **Abre PowerShell** en la raíz del proyecto local.
+3. **Ejecuta el script de empaquetado** para compilar la versión optimizada:
+   ```powershell
+   .\tools\pack-usb.ps1
+   ```
+4. **Copia el contenido** de la carpeta `USB/` generada directamente a la raíz de tu pendrive.
+5. **Añade las API keys (Opcional):** Copia tus archivos `.OPENROUTER_KEY` y `.GEMINI_KEY` a la raíz del pendrive, justo al lado de `SupportAI.exe`, para activar el diagnóstico por IA.
 
 ---
 
