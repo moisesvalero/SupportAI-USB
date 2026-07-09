@@ -4,6 +4,7 @@
     <Project Path="src/SupportAI.Cli/SupportAI.Cli.csproj" />
     <Project Path="src/SupportAI.Collectors.Windows/SupportAI.Collectors.Windows.csproj" />
     <Project Path="src/SupportAI.Core/SupportAI.Core.csproj" />
+    <Project Path="src/SupportAI.Ia/SupportAI.Ia.csproj" />
     <Project Path="src/SupportAI.Repairs/SupportAI.Repairs.csproj" />
   </Folder>
   <Folder Name="/tests/">

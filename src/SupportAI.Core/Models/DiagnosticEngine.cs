@@ -90,6 +90,74 @@ public static class DiagnosticEngine
             });
         }
 
+        // Red
+        if (diag.Red is not null)
+        {
+            if (!diag.Red.Internet)
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Alto,
+                    Modulo = "Red",
+                    Titulo = "Sin conexión a Internet",
+                    Detalle = "No se pudo contactar con 8.8.8.8. Puede deberse a un problema de red, DNS o firewall.",
+                    ReparacionesSugeridas = ["rep.dns.flush", "rep.winsock.reset"]
+                });
+            }
+            if (string.IsNullOrWhiteSpace(diag.Red.DNS))
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Medio,
+                    Modulo = "Red",
+                    Titulo = "DNS no configurado",
+                    Detalle = "No se detectaron servidores DNS configurados en ninguna interfaz de red activa.",
+                    ReparacionesSugeridas = ["rep.dns.flush"]
+                });
+            }
+        }
+
+        // Seguridad
+        if (diag.Seguridad is not null)
+        {
+            if (!diag.Seguridad.DefenderActivo)
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Alto,
+                    Modulo = "Seguridad",
+                    Titulo = "Defender desactivado",
+                    Detalle = "Microsoft Defender no está activo. El equipo podría estar desprotegido.",
+                    ReparacionesSugeridas = []
+                });
+            }
+            if (!diag.Seguridad.FirewallActivo)
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Alto,
+                    Modulo = "Seguridad",
+                    Titulo = "Firewall desactivado",
+                    Detalle = "El firewall de Windows no está activo en el perfil Domain. Riesgo de seguridad.",
+                    ReparacionesSugeridas = []
+                });
+            }
+        }
+
+        // Drivers
+        if (diag.Drivers?.DispositivosError is { Count: > 0 })
+        {
+            var nomDrv = string.Join(", ", diag.Drivers.DispositivosError.Take(3).Select(d => d.Nombre));
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Medio,
+                Modulo = "Drivers",
+                Titulo = "Dispositivos con errores",
+                Detalle = $"{diag.Drivers.DispositivosError.Count} dispositivo(s) tienen errores de driver: {nomDrv}{(diag.Drivers.DispositivosError.Count > 3 ? " ..." : "")}.",
+                ReparacionesSugeridas = []
+            });
+        }
+
         // Eventos críticos
         var erroresSistema = diag.Windows?.EventosCriticos?.Count ?? 0;
         if (erroresSistema > 5)

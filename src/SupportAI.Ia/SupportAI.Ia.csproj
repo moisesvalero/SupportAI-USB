@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SupportAI.Core\SupportAI.Core.csproj" />
+    <ProjectReference Include="..\SupportAI.Repairs\SupportAI.Repairs.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Mscc.GenerativeAI" Version="2.*" />
+  </ItemGroup>
+</Project>

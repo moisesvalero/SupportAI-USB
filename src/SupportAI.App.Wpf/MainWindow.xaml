@@ -104,6 +104,7 @@
                                 <TextBlock Grid.Column="2" Text="{Binding RamUso, StringFormat='Uso: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#555"/>
                             </Grid>
                             <TextBlock Text="{Binding Uptime, StringFormat='Activo: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#555"/>
+                            <TextBlock Text="{Binding RedInfo, StringFormat='Red: {0}'}" FontSize="12" Foreground="#555" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -131,12 +132,22 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Mode indicator -->
-                    <Border Style="{StaticResource Card}" Background="#fef9e7">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔵" FontSize="14" Margin="0,0,8,0"/>
-                            <TextBlock Text="Modo: Reglas locales" FontSize="12" Foreground="#7f8c8d" Margin="0,0,8,0"/>
-                            <TextBlock Text="(IA próximamente)" FontSize="10" Foreground="#bdc3c7" VerticalAlignment="Center"/>
+                    <!-- IA config -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Análisis IA" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
+                            <CheckBox IsChecked="{Binding IaConsent}" Margin="0,0,0,8">
+                                <TextBlock Text="He informado al cliente y autoriza el envío de datos técnicos al proveedor IA" 
+                                          FontSize="11" Foreground="#555" TextWrapping="Wrap" MaxWidth="220"/>
+                            </CheckBox>
+                            <Button Content="Analizar con IA" Command="{Binding AnalyzeWithIaCommand}"
+                                    FontSize="12" Padding="12,6" Background="#8e44ad" Foreground="White"
+                                    BorderThickness="0" Cursor="Hand"
+                                    IsEnabled="{Binding PuedeAnalizarConIa}"
+                                    HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding IaProvider, StringFormat='Proveedor: {0}', TargetNullValue='Reglas offline'}" 
+                                       FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -204,6 +215,16 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- IA Results -->
+                    <Border Style="{StaticResource Card}" Visibility="{Binding TieneIaResultado, Converter={StaticResource BoolVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Análisis IA" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding IaExplicacion}" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding IaProvider, StringFormat='— {0}'}" FontSize="10" Foreground="#95a5a6" FontStyle="Italic"/>
                         </StackPanel>
                     </Border>
 

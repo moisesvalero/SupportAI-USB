@@ -39,8 +39,8 @@ $r = [PSCustomObject]@{
         so = Get-CimInstance Win32_OperatingSystem | Select-Object @{N='caption';E={$_.Caption}}, @{N='version';E={$_.Version}}, @{N='build';E={$_.BuildNumber}}, @{N='instalado';E={$_.InstallDate}}, @{N='ultimoArranque';E={$_.LastBootUpTime}}
     }
     salud = [PSCustomObject]@{
-        diasActivo = if ($_.UltimoArranque) { [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalDays) } else { 0 }
-        horasActivo = if ($_.UltimoArranque) { [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).Hours) } else { 0 }
+        diasActivo = [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalDays)
+        horasActivo = [math]::Max(0, [int](Get-Date).Subtract((Get-CimInstance Win32_OperatingSystem).LastBootUpTime).Hours)
         ramLibreMB = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024, 1)
         ramTotalMB = [math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1024, 1)
         procesosPesados = Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 8 @{N='nombre';E={$_.Name}}, @{N='workingSetMB';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, @{N='pid';E={$_.ProcessId}}
@@ -51,6 +51,21 @@ $r = [PSCustomObject]@{
         archivosCorruptos = $false
         serviciosFallando = Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}}
         eventosCriticos = Get-WinEvent -FilterHashtable @{LogName='System';Level=1,2} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{N='id';E={$_.Id}}, @{N='nivel';E={$_.Level}}, @{N='fuente';E={$_.ProviderName}}, @{N='mensaje';E={$_.Message}}, @{N='timestamp';E={$_.TimeCreated}}
+    }
+    red = [PSCustomObject]@{
+        dns = (Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses } | Select-Object -First 1).ServerAddresses[0]
+        gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
+        adaptadores = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -First 3 @{N='nombre';E={$_.Name}}, @{N='ip';E={(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress}}, @{N='dhcpActivo';E={$true}}, @{N='tipo';E={$_.MediaType}}
+        internet = (Test-Connection 8.8.8.8 -Count 1 -Quiet -ErrorAction SilentlyContinue)
+    }
+    seguridad = [PSCustomObject]@{
+        defenderActivo = (Get-MpComputerStatus -ErrorAction SilentlyContinue).AntivirusEnabled
+        firewallActivo = (Get-NetFirewallProfile -ErrorAction SilentlyContinue | Where-Object Name -eq 'Domain').Enabled
+        bitlockerActivo = (Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue).ProtectionStatus -eq 1
+        ultimoAnalisis = (Get-MpComputerStatus -ErrorAction SilentlyContinue).LastQuickScanDateTime
+    }
+    drivers = [PSCustomObject]@{
+        dispositivosError = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 -and $_.ConfigManagerErrorCode -ne 22 -and $_.ConfigManagerErrorCode -ne 24 } | Select-Object -First 10 @{N='nombre';E={$_.Name}}, @{N='codigoError';E={$_.ConfigManagerErrorCode}}, @{N='descripcion';E={$_.Description}}
     }
 }
 $r | ConvertTo-Json -Depth 5
@@ -168,6 +183,54 @@ $r | ConvertTo-Json -Depth 5
             };
         }
 
+        if (raw.Red is not null)
+        {
+            diag = diag with
+            {
+                Red = new NetworkInfo
+                {
+                    DNS = raw.Red.Dns ?? "",
+                    Gateway = raw.Red.Gateway ?? "",
+                    Internet = raw.Red.Internet,
+                    Adaptadores = raw.Red.Adaptadores?.Select(a => new AdaptadorInfo
+                    {
+                        Nombre = a.Nombre ?? "", IP = a.Ip ?? "",
+                        DhcpActivo = a.DhcpActivo, Tipo = a.Tipo ?? ""
+                    }).ToList() ?? []
+                }
+            };
+        }
+
+        if (raw.Seguridad is not null)
+        {
+            diag = diag with
+            {
+                Seguridad = new SecurityInfo
+                {
+                    DefenderActivo = raw.Seguridad.DefenderActivo,
+                    FirewallActivo = raw.Seguridad.FirewallActivo,
+                    BitlockerActivo = raw.Seguridad.BitlockerActivo,
+                    UltimoAnalisis = raw.Seguridad.UltimoAnalisis ?? ""
+                }
+            };
+        }
+
+        if (raw.Drivers is not null)
+        {
+            diag = diag with
+            {
+                Drivers = new DriverInfo
+                {
+                    DispositivosError = raw.Drivers.DispositivosError?.Select(d => new DispositivoErrorInfo
+                    {
+                        Nombre = d.Nombre ?? "",
+                        CodigoError = d.CodigoError,
+                        Descripcion = d.Descripcion ?? ""
+                    }).ToList() ?? []
+                }
+            };
+        }
+
         return diag;
     }
 
@@ -177,6 +240,9 @@ $r | ConvertTo-Json -Depth 5
         public HardwareRaw? Hardware { get; set; }
         public SaludRaw? Salud { get; set; }
         public WindowsRaw? Windows { get; set; }
+        public RedRaw? Red { get; set; }
+        public SeguridadRaw? Seguridad { get; set; }
+        public DriverRaw? Drivers { get; set; }
     }
 
     private class HardwareRaw
@@ -223,4 +289,27 @@ $r | ConvertTo-Json -Depth 5
 
     private class ServicioRaw { public string? Nombre { get; set; } public string? NombreCorto { get; set; } public string? Estado { get; set; } public string? TipoInicio { get; set; } }
     private class EventoRaw { public int Id { get; set; } public int Nivel { get; set; } public string? Fuente { get; set; } public string? Mensaje { get; set; } public DateTime? Timestamp { get; set; } }
+
+    private class RedRaw
+    {
+        public string? Dns { get; set; }
+        public string? Gateway { get; set; }
+        public List<AdaptadorRaw>? Adaptadores { get; set; }
+        public bool Internet { get; set; }
+    }
+    private class AdaptadorRaw { public string? Nombre { get; set; } public string? Ip { get; set; } public bool DhcpActivo { get; set; } public string? Tipo { get; set; } }
+
+    private class SeguridadRaw
+    {
+        public bool DefenderActivo { get; set; }
+        public bool FirewallActivo { get; set; }
+        public bool BitlockerActivo { get; set; }
+        public string? UltimoAnalisis { get; set; }
+    }
+
+    private class DriverRaw
+    {
+        public List<DispositivoRaw>? DispositivosError { get; set; }
+    }
+    private class DispositivoRaw { public string? Nombre { get; set; } public int CodigoError { get; set; } public string? Descripcion { get; set; } }
 }

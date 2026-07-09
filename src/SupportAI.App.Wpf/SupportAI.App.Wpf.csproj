@@ -12,6 +12,7 @@
     <ProjectReference Include="..\SupportAI.Core\SupportAI.Core.csproj" />
     <ProjectReference Include="..\SupportAI.Collectors.Windows\SupportAI.Collectors.Windows.csproj" />
     <ProjectReference Include="..\SupportAI.Repairs\SupportAI.Repairs.csproj" />
+    <ProjectReference Include="..\SupportAI.Ia\SupportAI.Ia.csproj" />
     <PackageReference Include="QuestPDF" Version="2025.*" />
   </ItemGroup>
 
