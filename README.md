@@ -1,6 +1,10 @@
 # 🛠️ SupportAI USB
 
 <p align="center">
+  <a href="#english">English</a> • <a href="#español">Español</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=.net&logoColor=white" alt=".NET 10" />
   <img src="https://img.shields.io/badge/C%23-12.0-239120?style=for-the-badge&logo=csharp&logoColor=white" alt="C#" />
   <img src="https://img.shields.io/badge/WPF-Modern%20UI-orange?style=for-the-badge&logo=windows&logoColor=white" alt="WPF UI" />
@@ -8,11 +12,14 @@
   <img src="https://img.shields.io/badge/License-MIT-4caf50?style=for-the-badge" alt="License MIT" />
 </p>
 
-SupportAI USB is a **portable Windows diagnostic and automated repair assistant** powered by local and cloud-based AI. Designed to run seamlessly from a USB flash drive, it collects hardware metrics, monitors system events, analyzes health telemetry, and provides one-click executable repairs.
-
 ---
 
-## ✨ Key Features
+<a name="english"></a>
+## 🇬🇧 English Version
+
+SupportAI USB is a **portable Windows diagnostic and automated repair assistant** powered by local and cloud-based AI. Designed to run seamlessly from a USB flash drive, it collects hardware metrics, monitors system events, analyzes health telemetry, and provides one-click executable repairs.
+
+### ✨ Key Features
 
 * **⚡ Ultra-fast Telemetry:** Instantly reads CPU, RAM, GPU, storage health, logical drives, active network interfaces, and critical Windows event logs.
 * **🧠 Hybrid AI Engine:** 
@@ -23,19 +30,16 @@ SupportAI USB is a **portable Windows diagnostic and automated repair assistant*
 * **🧰 One-Click Repairs:** Instantly trigger PowerShell/CMD automation scripts for common system, network, and registry issues.
 * **📦 Portable Single-File Build:** Package everything into a standalone executable ready for your IT support USB drive.
 
----
+### 🚀 Quick Start
 
-## 🚀 Quick Start
-
-### 🖥️ Run WPF Desktop Application
+#### 🖥️ Run WPF Desktop Application
 Launch the modern WPF desktop dashboard to run automated scans and execute repairs visually:
 ```powershell
 dotnet run --project src\SupportAI.App.Wpf
 ```
 
-### 📟 Run Command-Line Interface (CLI)
+#### 📟 Run Command-Line Interface (CLI)
 SupportAI USB features a powerful headless CLI for automated IT scripts:
-
 ```powershell
 # Perform full system diagnosis and save JSON output
 dotnet run --project src\SupportAI.Cli -- --diagnose --json --out diag.json
@@ -50,9 +54,7 @@ dotnet run --project src\SupportAI.Cli -- --repair rep.temp.clean --dry-run
 dotnet run --project src\SupportAI.Cli -- --repair rep.dns.flush
 ```
 
----
-
-## 🔑 AI Cloud Configuration (Optional)
+### 🔑 AI Cloud Configuration (Optional)
 
 To enable cloud-based AI analysis (OpenRouter or Gemini), place your API key text files adjacent to the compiled executable (`SupportAI.exe`):
 
@@ -61,9 +63,7 @@ To enable cloud-based AI analysis (OpenRouter or Gemini), place your API key tex
 
 *If no key files are present, SupportAI USB runs safely in **Offline Mode** utilizing local diagnostic rules.*
 
----
-
-## 🔧 Automated Repair Catalog
+### 🔧 Automated Repair Catalog
 
 SupportAI USB includes 9 built-in administrative repair tools:
 
@@ -79,9 +79,90 @@ SupportAI USB includes 9 built-in administrative repair tools:
 | `rep.wu.reset` | **Reset Windows Update** | Restarts update services and resets local cache databases. |
 | `rep.restore.point` | **Create Restore Point** | Creates a System Restore Point before applying modifications. |
 
+### 📦 Creating a Standalone USB Build
+
+To package SupportAI USB into a portable, single-file folder structure suitable for USB drives, execute the pack script:
+```powershell
+tools\pack-usb.ps1
+```
+
 ---
 
-## 📁 Repository Structure
+<a name="español"></a>
+## 🇪🇸 Versión en Español
+
+SupportAI USB es un **asistente portátil de diagnóstico y reparación automática de Windows** impulsado por IA local y en la nube. Diseñado para ejecutarse sin problemas desde una unidad flash USB, recopila métricas de hardware, monitorea eventos del sistema, analiza la telemetría de salud y proporciona reparaciones ejecutables con un solo clic.
+
+### ✨ Características Clave
+
+* **⚡ Telemetría ultrarrápida:** Lee instantáneamente CPU, RAM, GPU, estado del almacenamiento, unidades lógicas, interfaces de red activas y registros de eventos críticos de Windows.
+* **🧠 Motor de IA híbrido:**
+  * **Online (Principal):** OpenRouter (API key) con conmutación por error automática a Google Gemini.
+  * **Local Offline:** Ejecución del modelo local GGUF de Llama.cpp.
+  * **Reglas de respaldo:** Motor de reglas estáticas offline para garantizar el funcionamiento bajo cualquier condición.
+* **🛡️ Filtro de privacidad integrado:** Redacta automáticamente nombres de usuario, nombres de equipo, dominios, números de serie, direcciones IP/DNS y rutas de perfiles antes de enviar datos a la IA.
+* **🧰 Reparaciones en un clic:** Ejecuta al instante scripts de automatización de PowerShell/CMD para problemas comunes de sistema, red y registro.
+* **📦 Compilación portátil en un solo archivo:** Empaqueta todo en un ejecutable independiente listo para tu pendrive de soporte técnico.
+
+### 🚀 Inicio Rápido
+
+#### 🖥️ Ejecutar la aplicación de escritorio (WPF)
+Inicia el panel moderno de escritorio WPF para realizar análisis y ejecutar reparaciones visualmente:
+```powershell
+dotnet run --project src\SupportAI.App.Wpf
+```
+
+#### 📟 Ejecutar la interfaz de línea de comandos (CLI)
+SupportAI USB cuenta con una potente CLI sin interfaz ideal para scripts de automatización:
+```powershell
+# Realizar un diagnóstico completo del sistema y guardar la salida en JSON
+dotnet run --project src\SupportAI.Cli -- --diagnose --json --out diag.json
+
+# Listar todas las acciones de reparación disponibles en el sistema
+dotnet run --project src\SupportAI.Cli -- --list-repairs
+
+# Ejecutar una reparación específica en modo de simulación (dry-run)
+dotnet run --project src\SupportAI.Cli -- --repair rep.temp.clean --dry-run
+
+# Ejecutar una acción de reparación con privilegios de administrador
+dotnet run --project src\SupportAI.Cli -- --repair rep.dns.flush
+```
+
+### 🔑 Configuración de IA en la Nube (Opcional)
+
+Para habilitar el análisis de IA basado en la nube (OpenRouter o Gemini), coloca tus archivos de texto con las API keys junto al ejecutable compilado (`SupportAI.exe`):
+
+* `.OPENROUTER_KEY` — API key de [openrouter.ai](https://openrouter.ai) *(Recomendado, utiliza modelos gratuitos de alta calidad)*
+* `.GEMINI_KEY` — API key de [Google AI Studio](https://aistudio.google.com) *(Respaldo)*
+
+*Si no hay archivos de claves presentes, SupportAI USB se ejecutará de forma segura en **Modo Offline** utilizando las reglas de diagnóstico locales.*
+
+### 🔧 Catálogo de Reparaciones Automáticas
+
+SupportAI USB incluye 9 herramientas de reparación administrativa integradas:
+
+| ID | Acción de Reparación | Alcance y Descripción |
+|---|---|---|
+| `rep.dns.flush` | **Limpiar Caché DNS** | Vacía el caché del resolver DNS local. |
+| `rep.temp.clean` | **Limpiar Archivos Temporales** | Elimina de forma segura archivos temporales en `%TEMP%` y `C:\Windows\Temp`. |
+| `rep.explorer.restart` | **Reiniciar Explorer** | Reinicia el shell de Windows (`explorer.exe`) para resolver bloqueos de interfaz. |
+| `rep.sfc` | **Escaneo de Sistema SFC** | Ejecuta `sfc /scannow` para reparar archivos corruptos del sistema de Windows. |
+| `rep.dism.health` | **Restaurar Salud DISM** | Restaura archivos de imagen locales de Windows mediante comprobaciones en línea. |
+| `rep.winsock.reset` | **Restablecer Winsock** | Restablece los adaptadores de red locales a su estado predeterminado. |
+| `rep.spooler.reset` | **Reiniciar Cola de Impresión** | Reinicia los servicios de impresión y purga colas de impresión atascadas. |
+| `rep.wu.reset` | **Restablecer Windows Update** | Reinicia los servicios de actualización y restablece las bases de datos locales. |
+| `rep.restore.point` | **Crear Punto de Restauración** | Crea un Punto de Restauración del Sistema antes de aplicar modificaciones. |
+
+### 📦 Crear una Compilación Independiente para USB
+
+Para empaquetar SupportAI USB en una estructura de carpetas portátil de un solo archivo apta para pendrives, ejecuta el script:
+```powershell
+tools\pack-usb.ps1
+```
+
+---
+
+## 📁 Repository Structure / Estructura del Repositorio
 
 ```
 src/
@@ -94,15 +175,3 @@ src/
 tests/
 └── SupportAI.Core.Tests/           # Comprehensive Unit Tests (xUnit)
 ```
-
----
-
-## 📦 Creating a Standalone USB Build
-
-To package SupportAI USB into a portable, single-file folder structure suitable for USB drives, execute the pack script:
-
-```powershell
-tools\pack-usb.ps1
-```
-
-This generates a standalone `USB/` directory containing a single-file executable `SupportAI.exe` with all necessary assets.
