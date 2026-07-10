@@ -25,6 +25,9 @@ public class MainViewModel : INotifyPropertyChanged
     private int _scanProgress;
     private string _faseActual = "";
     private bool _escaneando;
+    private int _descargaProgreso;
+    private bool _descargando;
+    private string _descargaFase = "";
 
     public MainViewModel()
     {
@@ -38,6 +41,7 @@ public class MainViewModel : INotifyPropertyChanged
         ToggleExpandirCommand = new RelayCommand(ToggleExpandir);
         IniciarServicioCommand = new AsyncRelayCommand(async param => await IniciarServicio(param));
         OpenSettingsCommand = new RelayCommand(_ => AbrirSettings());
+        DescargarModeloCommand = new AsyncRelayCommand(async _ => await DescargarModeloAsync());
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
 
@@ -66,6 +70,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ToggleExpandirCommand { get; }
     public ICommand IniciarServicioCommand { get; }
     public ICommand OpenSettingsCommand { get; }
+    public ICommand DescargarModeloCommand { get; }
 
     public string? ProblemaExpandidoId
     {
@@ -280,6 +285,23 @@ public class MainViewModel : INotifyPropertyChanged
         set { _faseActual = value; OnPropertyChanged(); }
     }
 
+    public bool Descargando
+    {
+        get => _descargando;
+        set { _descargando = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeDescargar)); }
+    }
+    public int DescargaProgreso
+    {
+        get => _descargaProgreso;
+        set { _descargaProgreso = value; OnPropertyChanged(); }
+    }
+    public string DescargaFase
+    {
+        get => _descargaFase;
+        set { _descargaFase = value; OnPropertyChanged(); }
+    }
+    public bool PuedeDescargar => !_descargando;
+
     private string _iaExplicacion = "";
     public string IaExplicacion
     {
@@ -325,11 +347,42 @@ public class MainViewModel : INotifyPropertyChanged
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = ModelDownloader.LlamaCppUrl,
+                FileName = "https://github.com/ggerganov/llama.cpp/releases/latest",
                 UseShellExecute = true
             });
         }
         catch { }
+    }
+
+    private async Task DescargarModeloAsync()
+    {
+        if (_descargando) return;
+        Descargando = true;
+        DescargaProgreso = 0;
+        DescargaFase = "Iniciando descarga...";
+        var progress = new Progress<int>(p => DescargaProgreso = p);
+
+        try
+        {
+            await ModelDownloader.DownloadTinyModelAsync(progress, CancellationToken.None);
+            DescargaFase = "Descarga completada";
+            RefreshModelStatus();
+            StatusText = "✅ Modelo descargado correctamente. Ahora puedes usar IA local.";
+        }
+        catch (OperationCanceledException)
+        {
+            DescargaFase = "Cancelado";
+            StatusText = "⏹️ Descarga cancelada.";
+        }
+        catch (Exception ex)
+        {
+            DescargaFase = "Error";
+            StatusText = $"❌ Error en descarga: {ex.Message}";
+        }
+        finally
+        {
+            Descargando = false;
+        }
     }
 
     private void RefreshModelStatus()

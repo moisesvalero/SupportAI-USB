@@ -297,10 +297,30 @@
                             <Separator Background="#edf2f7" Height="1" Margin="0,8,0,6"/>
                             <TextBlock Text="Modelo local (GGUF)" FontSize="11" FontWeight="SemiBold" Foreground="#4a5568"/>
                             <TextBlock Text="{Binding ModelStatus}" FontSize="10" Foreground="#636e72" TextWrapping="Wrap"/>
-                            <Button Content="Descargar llama.cpp + modelo" Command="{Binding DownloadModelCommand}"
-                                    FontSize="10" Padding="8,4" Background="#636e72" Foreground="White"
+
+                            <Button Content="⬇ Descargar modelo (350 MB)" Command="{Binding DescargarModeloCommand}"
+                                    FontSize="10" Padding="8,4" Background="#e94560" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
-                                    HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                                    HorizontalAlignment="Left" Margin="0,4,0,0"
+                                    IsEnabled="{Binding PuedeDescargar}"
+                                    Visibility="{Binding Descargando, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
+
+                            <Grid Visibility="{Binding Descargando, Converter={StaticResource BoolVis}}"
+                                  Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ProgressBar Grid.Column="0" Value="{Binding DescargaProgreso}" Minimum="0" Maximum="100"
+                                             Height="6" Foreground="#e94560" Background="#edf2f7"
+                                             BorderThickness="0" Margin="0,0,6,0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding DescargaProgreso, StringFormat='{}{0}%'}"
+                                           FontSize="10" Foreground="#636e72" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <TextBlock Text="{Binding DescargaFase}" FontSize="9" Foreground="#95a5a6"
+                                       Margin="0,2,0,0"
+                                       Visibility="{Binding Descargando, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
