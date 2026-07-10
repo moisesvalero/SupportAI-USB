@@ -66,8 +66,10 @@ try {
 # Plan de energía
 $planEnergia = ''
 try {
-    $plan = Get-CimInstance -Namespace root/cimv2/power -ClassName Win32_PowerPlan -ErrorAction SilentlyContinue | Where-Object IsActive
-    if ($plan) { $planEnergia = $plan.ElementName }
+    $planOut = powercfg /getactivescheme 2>$null
+    if ($planOut) {
+        if ($planOut -match '\(([^)]+)\)') { $planEnergia = $matches[1] }
+    }
 } catch {}
 
 # Page file
@@ -100,13 +102,10 @@ try {
     if ($ping) { $latencia = [math]::Round($ping.ResponseTime, 1) }
 } catch {}
 
-# SMART discos
-$smartDiscos = @()
+# SMART discos - lookup por modelo
+$smartLookup = @{}
 try {
-    $physicalDisks = Get-PhysicalDisk -ErrorAction SilentlyContinue
-    foreach ($pd in $physicalDisks) {
-        $smartDiscos += [PSCustomObject]@{ modelo = $pd.FriendlyName; smartStatus = [string]$pd.HealthStatus }
-    }
+    Get-PhysicalDisk -ErrorAction SilentlyContinue | ForEach-Object { $smartLookup[$_.FriendlyName.Trim()] = [string]$_.HealthStatus }
 } catch {}
 
 $r = [PSCustomObject]@{
@@ -114,7 +113,7 @@ $r = [PSCustomObject]@{
         cpu = Get-CimInstance Win32_Processor | Select-Object @{N='nombre';E={$_.Name}}, @{N='nucleos';E={$_.NumberOfCores}}, @{N='hilos';E={$_.NumberOfLogicalProcessors}}, @{N='maxFrecuenciaMHz';E={$_.MaxClockSpeed}}
         ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{N='totalBytes';E={$_.Sum}}
         gpu = @(Get-CimInstance Win32_VideoController | Select-Object @{N='nombre';E={$_.Name}}, @{N='vramBytes';E={$_.AdapterRAM}}, @{N='driverVersion';E={$_.DriverVersion}})
-        discos = @(Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}}, @{N='smartStatus';E={ if ($smartDiscos) { ($smartDiscos | Where-Object { $_.modelo -eq $_.Model } | Select-Object -First 1).smartStatus } else { '' } }})
+        discos = @(Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}}, @{N='smartStatus';E={ if ($smartLookup.Count -gt 0) { $m = $_.Model.Trim(); $smartLookup[$m] } else { '' } }})
         discosLogicos = @(Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3 | Select-Object @{N='letra';E={$_.DeviceID}}, @{N='sizeBytes';E={$_.Size}}, @{N='freeBytes';E={$_.FreeSpace}})
         bios = Get-CimInstance Win32_BIOS | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='version';E={$_.SMBIOSBIOSVersion}}
         placa = Get-CimInstance Win32_BaseBoard | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='producto';E={$_.Product}}
