@@ -478,19 +478,13 @@ public class MainViewModel : INotifyPropertyChanged
 
     private static string? GetKeyFromFile(string name)
     {
-        // Primero settings.json (configuración desde UI)
         var settings = Services.SettingsService.Load();
-        var key = name switch
+        return name switch
         {
             "OPENROUTER_KEY" => settings.OpenRouterKey,
             "GEMINI_KEY" => settings.GeminiKey,
             _ => null
         };
-        if (!string.IsNullOrWhiteSpace(key)) return key;
-
-        // Fallback al archivo .KEY junto al exe
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $".{name}");
-        return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
     }
 
     private async void ExecuteRepair(object? parameter)
