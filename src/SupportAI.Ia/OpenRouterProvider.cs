@@ -17,6 +17,34 @@ public class OpenRouterProvider : ILlmProvider
     public string Name => "OpenRouter";
     public bool Disponible => !string.IsNullOrWhiteSpace(_apiKey);
 
+    public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
+    {
+        var body = new
+        {
+            model = "google/gemini-2.5-flash:free",
+            messages = messages.Select(m => new { role = m.Role, content = m.Text }).ToArray(),
+            max_tokens = 1000,
+            temperature = 0.3
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions")
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        request.Headers.Add("HTTP-Referer", "https://supportai-usb.local");
+        request.Headers.Add("X-OpenRouter-Title", "SupportAI USB");
+
+        var response = await _sharedHttp.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadFromJsonAsync<OpenRouterResponse>(ct);
+        var content = json?.choices?[0]?.message?.content;
+        if (string.IsNullOrWhiteSpace(content))
+            throw new InvalidOperationException("Respuesta vacía de OpenRouter");
+        return content;
+    }
+
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var prompt = BuildPrompt(diag);

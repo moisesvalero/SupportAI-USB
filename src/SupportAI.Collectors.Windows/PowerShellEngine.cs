@@ -43,16 +43,83 @@ try {
     if ($dismOut -match "reparable|corrupt") { $archivosCorruptos = $true }
 } catch {}
 
+# Temperatura CPU
+$cpuTemp = 0
+try {
+    $temp = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue
+    if ($temp) { $cpuTemp = [math]::Round(($temp[0].CurrentTemperature - 2732) / 10.0, 1) }
+} catch {}
+
+# Uso de CPU
+$cpuUsage = 0
+try {
+    $load = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue).LoadPercentage
+    if ($load) { $cpuUsage = [double]$load }
+} catch {}
+
+# Frecuencia actual CPU
+$freqActual = 0
+try {
+    $freqActual = [int](Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue).CurrentClockSpeed
+} catch {}
+
+# Plan de energía
+$planEnergia = ''
+try {
+    $plan = Get-CimInstance -Namespace root/cimv2/power -ClassName Win32_PowerPlan -ErrorAction SilentlyContinue | Where-Object IsActive
+    if ($plan) { $planEnergia = $plan.ElementName }
+} catch {}
+
+# Page file
+$pageFileTotal = 0
+$pageFileUsado = 0
+try {
+    $pf = Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue
+    if ($pf) { $pageFileTotal = [math]::Round($pf[0].AllocatedBaseSize, 1); $pageFileUsado = [math]::Round($pf[0].CurrentUsage, 1) }
+} catch {}
+
+# Batería
+$bateria = $null
+try {
+    $bat = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+    if ($bat) {
+        $bateria = [PSCustomObject]@{
+            cargaPorcentaje = [int]$bat.EstimatedChargeRemaining
+            desgastePorcentaje = 0
+            ciclos = 0
+            tiempoRestanteMin = [int]($bat.EstimatedRunTime | Select-Object -First 1)
+            conectada = ($bat.BatteryStatus -eq 2 -or $bat.BatteryStatus -eq 6 -or $bat.BatteryStatus -eq 7)
+        }
+    }
+} catch {}
+
+# Latencia de red
+$latencia = 0
+try {
+    $ping = Test-Connection 8.8.8.8 -Count 1 -ErrorAction SilentlyContinue
+    if ($ping) { $latencia = [math]::Round($ping.ResponseTime, 1) }
+} catch {}
+
+# SMART discos
+$smartDiscos = @()
+try {
+    $physicalDisks = Get-PhysicalDisk -ErrorAction SilentlyContinue
+    foreach ($pd in $physicalDisks) {
+        $smartDiscos += [PSCustomObject]@{ modelo = $pd.FriendlyName; smartStatus = [string]$pd.HealthStatus }
+    }
+} catch {}
+
 $r = [PSCustomObject]@{
     hardware = [PSCustomObject]@{
         cpu = Get-CimInstance Win32_Processor | Select-Object @{N='nombre';E={$_.Name}}, @{N='nucleos';E={$_.NumberOfCores}}, @{N='hilos';E={$_.NumberOfLogicalProcessors}}, @{N='maxFrecuenciaMHz';E={$_.MaxClockSpeed}}
         ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{N='totalBytes';E={$_.Sum}}
         gpu = @(Get-CimInstance Win32_VideoController | Select-Object @{N='nombre';E={$_.Name}}, @{N='vramBytes';E={$_.AdapterRAM}}, @{N='driverVersion';E={$_.DriverVersion}})
-        discos = @(Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}})
+        discos = @(Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}}, @{N='smartStatus';E={ if ($smartDiscos) { ($smartDiscos | Where-Object { $_.modelo -eq $_.Model } | Select-Object -First 1).smartStatus } else { '' } }})
         discosLogicos = @(Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3 | Select-Object @{N='letra';E={$_.DeviceID}}, @{N='sizeBytes';E={$_.Size}}, @{N='freeBytes';E={$_.FreeSpace}})
         bios = Get-CimInstance Win32_BIOS | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='version';E={$_.SMBIOSBIOSVersion}}
         placa = Get-CimInstance Win32_BaseBoard | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='producto';E={$_.Product}}
         so = $os | Select-Object @{N='caption';E={$_.Caption}}, @{N='version';E={$_.Version}}, @{N='build';E={$_.BuildNumber}}, @{N='instalado';E={if($_.InstallDate){$_.InstallDate.ToString('o')}}}, @{N='ultimoArranque';E={if($_.LastBootUpTime){$_.LastBootUpTime.ToString('o')}}}
+        bateria = $bateria
     }
     salud = [PSCustomObject]@{
         diasActivo = [math]::Max(0, [int](Get-Date).Subtract($os.LastBootUpTime).TotalDays)
@@ -61,6 +128,13 @@ $r = [PSCustomObject]@{
         ramTotalMB = [math]::Round($os.TotalVisibleMemorySize / 1024, 1)
         procesosPesados = @(Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 8 @{N='nombre';E={$_.Name}}, @{N='workingSetMB';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, @{N='pid';E={$_.ProcessId}})
         programasInicio = @(Get-CimInstance Win32_StartupCommand | Select-Object @{N='nombre';E={$_.Name}}, @{N='comando';E={$_.Command}}, @{N='ubicacion';E={$_.Location}})
+        cpuUsoPorcentaje = $cpuUsage
+        cpuTemperatura = $cpuTemp
+        frecuenciaActualMHz = $freqActual
+        cpuThrottling = ($freqActual -gt 0 -and $freqActual -lt 1000)
+        planEnergia = $planEnergia
+        pageFileTotalMB = $pageFileTotal
+        pageFileUsadoMB = $pageFileUsado
     }
     windows = [PSCustomObject]@{
         updatePendiente = $updatePendiente
@@ -73,6 +147,7 @@ $r = [PSCustomObject]@{
         gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
         adaptadores = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -First 3 @{N='nombre';E={$_.Name}}, @{N='ip';E={(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress}}, @{N='dhcpActivo';E={$true}}, @{N='tipo';E={$_.MediaType}})
         internet = (Test-Connection 8.8.8.8 -Count 1 -Quiet -ErrorAction SilentlyContinue)
+        latenciaMs = $latencia
     }
     seguridad = [PSCustomObject]@{
         defenderActivo = (Get-MpComputerStatus -ErrorAction SilentlyContinue).AntivirusEnabled
@@ -152,7 +227,8 @@ $r | ConvertTo-Json -Depth 5
                     }).ToList() ?? [],
                     Discos = raw.Hardware.Discos?.Select(d => new DiscoInfo
                     {
-                        Modelo = d.Modelo ?? "", SizeBytes = d.SizeBytes, Status = d.Status ?? ""
+                        Modelo = d.Modelo ?? "", SizeBytes = d.SizeBytes, Status = d.Status ?? "",
+                        SmartStatus = d.SmartStatus ?? ""
                     }).ToList() ?? [],
                     DiscosLogicos = raw.Hardware.DiscosLogicos?.Select(d => new DiscoLogicoInfo
                     {
@@ -169,6 +245,14 @@ $r | ConvertTo-Json -Depth 5
                     SO = raw.Hardware.So is { } s ? new OsInfo
                     {
                         Caption = s.Caption ?? "", Version = s.Version ?? "", Build = s.Build ?? ""
+                    } : null,
+                    Bateria = raw.Hardware.Bateria is { } bat ? new BatteryInfo
+                    {
+                        CargaPorcentaje = bat.CargaPorcentaje,
+                        DesgastePorcentaje = bat.DesgastePorcentaje,
+                        Ciclos = bat.Ciclos,
+                        TiempoRestanteMin = bat.TiempoRestanteMin,
+                        Conectada = bat.Conectada
                     } : null
                 }
             };
@@ -191,7 +275,14 @@ $r | ConvertTo-Json -Depth 5
                     ProgramasInicio = raw.Salud.ProgramasInicio?.Select(s => new StartupInfo
                     {
                         Nombre = s.Nombre ?? "", Comando = s.Comando ?? "", Ubicacion = s.Ubicacion ?? ""
-                    }).ToList() ?? []
+                    }).ToList() ?? [],
+                    CpuUsoPorcentaje = raw.Salud.CpuUsoPorcentaje,
+                    CpuTemperatura = raw.Salud.CpuTemperatura,
+                    FrecuenciaActualMHz = raw.Salud.FrecuenciaActualMHz,
+                    CpuThrottling = raw.Salud.CpuThrottling,
+                    PlanEnergia = raw.Salud.PlanEnergia ?? "",
+                    PageFileTotalMB = raw.Salud.PageFileTotalMB,
+                    PageFileUsadoMB = raw.Salud.PageFileUsadoMB
                 }
             };
         }
@@ -228,6 +319,7 @@ $r | ConvertTo-Json -Depth 5
                     DNS = raw.Red.Dns ?? "",
                     Gateway = raw.Red.Gateway ?? "",
                     Internet = raw.Red.Internet,
+                    LatenciaMs = raw.Red.LatenciaMs,
                     Adaptadores = raw.Red.Adaptadores?.Select(a => new AdaptadorInfo
                     {
                         Nombre = a.Nombre ?? "", IP = a.Ip ?? "",
@@ -291,16 +383,18 @@ $r | ConvertTo-Json -Depth 5
         public BiosRaw? Bios { get; set; }
         public PlacaRaw? Placa { get; set; }
         public OsRaw? So { get; set; }
+        public BateriaRaw? Bateria { get; set; }
     }
 
     private class CpuRaw { public string? Nombre { get; set; } public int Nucleos { get; set; } public int Hilos { get; set; } public int MaxFrecuenciaMHz { get; set; } }
     private class RamRaw { public long TotalBytes { get; set; } }
     private class GpuRaw { public string? Nombre { get; set; } public long VramBytes { get; set; } public string? DriverVersion { get; set; } }
-    private class DiscoRaw { public string? Modelo { get; set; } public long SizeBytes { get; set; } public string? Status { get; set; } }
+    private class DiscoRaw { public string? Modelo { get; set; } public long SizeBytes { get; set; } public string? Status { get; set; } public string? SmartStatus { get; set; } }
     private class DiscoLogicoRaw { public string? Letra { get; set; } public long SizeBytes { get; set; } public long FreeBytes { get; set; } }
     private class BiosRaw { public string? Fabricante { get; set; } public string? Version { get; set; } }
     private class PlacaRaw { public string? Fabricante { get; set; } public string? Producto { get; set; } }
     private class OsRaw { public string? Caption { get; set; } public string? Version { get; set; } public string? Build { get; set; } public DateTime? Instalado { get; set; } public DateTime? UltimoArranque { get; set; } }
+    private class BateriaRaw { public int CargaPorcentaje { get; set; } public int DesgastePorcentaje { get; set; } public int Ciclos { get; set; } public int TiempoRestanteMin { get; set; } public bool Conectada { get; set; } }
 
     private class SaludRaw
     {
@@ -310,6 +404,13 @@ $r | ConvertTo-Json -Depth 5
         public double RamTotalMB { get; set; }
         public List<ProcesoRaw>? ProcesosPesados { get; set; }
         public List<StartupRaw>? ProgramasInicio { get; set; }
+        public double CpuUsoPorcentaje { get; set; }
+        public double CpuTemperatura { get; set; }
+        public int FrecuenciaActualMHz { get; set; }
+        public bool CpuThrottling { get; set; }
+        public string? PlanEnergia { get; set; }
+        public double PageFileTotalMB { get; set; }
+        public double PageFileUsadoMB { get; set; }
     }
 
     private class ProcesoRaw { public string? Nombre { get; set; } public double WorkingSetMB { get; set; } public int PID { get; set; } }
@@ -332,6 +433,7 @@ $r | ConvertTo-Json -Depth 5
         public string? Gateway { get; set; }
         public List<AdaptadorRaw>? Adaptadores { get; set; }
         public bool Internet { get; set; }
+        public double LatenciaMs { get; set; }
     }
     private class AdaptadorRaw { public string? Nombre { get; set; } public string? Ip { get; set; } public bool DhcpActivo { get; set; } public string? Tipo { get; set; } }
 

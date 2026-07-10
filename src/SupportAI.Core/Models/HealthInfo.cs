@@ -12,6 +12,13 @@ public record HealthInfo
         RamTotalMB > 0 ? Math.Round((1.0 - RamLibreMB / RamTotalMB) * 100, 1) : 0;
     [JsonPropertyName("procesosPesados")] public List<ProcesoInfo> ProcesosPesados { get; init; } = [];
     [JsonPropertyName("programasInicio")] public List<StartupInfo> ProgramasInicio { get; init; } = [];
+    [JsonPropertyName("cpuUsoPorcentaje")] public double CpuUsoPorcentaje { get; init; }
+    [JsonPropertyName("cpuTemperatura")] public double CpuTemperatura { get; init; }
+    [JsonPropertyName("frecuenciaActualMHz")] public int FrecuenciaActualMHz { get; init; }
+    [JsonPropertyName("cpuThrottling")] public bool CpuThrottling { get; init; }
+    [JsonPropertyName("planEnergia")] public string PlanEnergia { get; init; } = "";
+    [JsonPropertyName("pageFileTotalMB")] public double PageFileTotalMB { get; init; }
+    [JsonPropertyName("pageFileUsadoMB")] public double PageFileUsadoMB { get; init; }
 }
 
 public record ProcesoInfo

@@ -27,6 +27,9 @@ public class MainViewModel : INotifyPropertyChanged
     private int _descargaProgreso;
     private bool _descargando;
     private string _descargaFase = "";
+    private string _chatInput = "";
+    private bool _chatCargando;
+    private readonly List<ChatMessage> _chatHistory = [];
 
     public MainViewModel()
     {
@@ -41,6 +44,7 @@ public class MainViewModel : INotifyPropertyChanged
         IniciarServicioCommand = new AsyncRelayCommand(async param => await IniciarServicio(param));
         OpenSettingsCommand = new RelayCommand(_ => AbrirSettings());
         DescargarModeloCommand = new AsyncRelayCommand(async _ => await DescargarModeloAsync());
+        ChatSendCommand = new AsyncRelayCommand(async _ => await ChatSendAsync());
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
 
@@ -70,6 +74,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand IniciarServicioCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand DescargarModeloCommand { get; }
+    public ICommand ChatSendCommand { get; }
 
     public string? ProblemaExpandidoId
     {
@@ -229,6 +234,13 @@ public class MainViewModel : INotifyPropertyChanged
     public string RamUso => _diagnostico.Salud is { } s ? $"{s.RamUsoPorcentaje}%" : "";
     public string Uptime => _diagnostico.Salud is { } s ? $"{s.DiasActivo}d {s.HorasActivo}h" : "";
     public string RedInfo => _diagnostico.Red?.Internet == true ? "Conectado" : "Sin internet";
+    public string CpuUso => _diagnostico.Salud is { } s ? $"{s.CpuUsoPorcentaje}%" : "";
+    public string CpuTemp => _diagnostico.Salud is { CpuTemperatura: > 0 } s ? $"{s.CpuTemperatura}°C" : "N/D";
+    public string CpuFreq => _diagnostico.Salud is { FrecuenciaActualMHz: > 0 } s ? $"{s.FrecuenciaActualMHz} MHz" : "";
+    public string PlanEnergia => _diagnostico.Salud?.PlanEnergia ?? "";
+    public string Latencia => _diagnostico.Red?.Internet == true && _diagnostico.Red.LatenciaMs > 0 ? $"{_diagnostico.Red.LatenciaMs} ms" : "N/D";
+    public string BateriaInfo => _diagnostico.Hardware?.Bateria is { } b ? (b.Conectada ? $"🔌 {b.CargaPorcentaje}% (cargando)" : $"🔋 {b.CargaPorcentaje}%") : "";
+    public string PageFileInfo => _diagnostico.Salud is { PageFileTotalMB: > 0 } s ? $"{s.PageFileUsadoMB}/{s.PageFileTotalMB} MB" : "N/D";
 
     public bool PuedeAnalizarConIa => TieneDatos && !_iaCargando && !_reparando && !_escaneando;
 
@@ -579,6 +591,13 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RamUso));
         OnPropertyChanged(nameof(Uptime));
         OnPropertyChanged(nameof(RedInfo));
+        OnPropertyChanged(nameof(CpuUso));
+        OnPropertyChanged(nameof(CpuTemp));
+        OnPropertyChanged(nameof(CpuFreq));
+        OnPropertyChanged(nameof(PlanEnergia));
+        OnPropertyChanged(nameof(Latencia));
+        OnPropertyChanged(nameof(BateriaInfo));
+        OnPropertyChanged(nameof(PageFileInfo));
         OnPropertyChanged(nameof(Modulos));
         OnPropertyChanged(nameof(Problemas));
         OnPropertyChanged(nameof(HayProblemas));
@@ -622,9 +641,77 @@ public class MainViewModel : INotifyPropertyChanged
         return File.Exists(path);
     }
 
+    public List<ChatMessage> ChatMessages { get; set; } = [];
+    public string ChatInput
+    {
+        get => _chatInput;
+        set { _chatInput = value; OnPropertyChanged(); }
+    }
+    public bool ChatCargando
+    {
+        get => _chatCargando;
+        set { _chatCargando = value; OnPropertyChanged(); }
+    }
+
+    private async Task ChatSendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ChatInput) || _chatCargando) return;
+        var pregunta = ChatInput.Trim();
+        ChatInput = "";
+        OnPropertyChanged(nameof(ChatInput));
+
+        ChatMessages.Add(new ChatMessage("user", pregunta));
+        OnPropertyChanged(nameof(ChatMessages));
+        ChatCargando = true;
+        StatusText = "IA procesando pregunta...";
+
+        try
+        {
+            _llm ??= new LlmService(
+                openRouterKey: GetKeyFromFile("OPENROUTER_KEY"),
+                geminiKey: GetKeyFromFile("GEMINI_KEY"));
+
+            var diagJson = System.Text.Json.JsonSerializer.Serialize(_diagnostico, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = false,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+
+            var systemPrompt = $"""
+            Eres un técnico experto en diagnóstico de Windows. El usuario es un técnico de soporte.
+            Responde de forma concisa y práctica en español. Máximo 5 líneas por respuesta.
+            Da pasos concretos, no teorías.
+
+            Datos del diagnóstico del equipo:
+            {diagJson}
+            """;
+
+            _chatHistory.Add(new ChatMessage("system", systemPrompt));
+            _chatHistory.Add(new ChatMessage("user", pregunta));
+
+            var response = await _llm.ChatAsync(_chatHistory.Select(c => (c.Role, c.Text)).ToList());
+            ChatMessages.Add(new ChatMessage("assistant", response));
+            _chatHistory.Add(new ChatMessage("assistant", response));
+            OnPropertyChanged(nameof(ChatMessages));
+            StatusText = "Respuesta IA recibida.";
+        }
+        catch (Exception ex)
+        {
+            ChatMessages.Add(new ChatMessage("assistant", $"Error: {ex.Message}"));
+            OnPropertyChanged(nameof(ChatMessages));
+            StatusText = $"Error IA: {ex.Message}";
+        }
+        finally
+        {
+            ChatCargando = false;
+            OnPropertyChanged(nameof(ChatCargando));
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 public record ModuloCheck(string Nombre, bool Ok, string Icono);
+public record ChatMessage(string Role, string Text);

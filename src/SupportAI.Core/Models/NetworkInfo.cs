@@ -8,6 +8,7 @@ public record NetworkInfo
     [JsonPropertyName("gateway")] public string? Gateway { get; init; }
     [JsonPropertyName("adaptadores")] public List<AdaptadorInfo> Adaptadores { get; init; } = [];
     [JsonPropertyName("internet")] public bool Internet { get; init; }
+    [JsonPropertyName("latenciaMs")] public double LatenciaMs { get; init; }
 }
 
 public record AdaptadorInfo

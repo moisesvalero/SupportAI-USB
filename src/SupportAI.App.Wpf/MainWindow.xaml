@@ -244,6 +244,54 @@
                                 <TextBlock Grid.Column="0" Text="🌐" FontSize="14"/>
                                 <TextBlock Grid.Column="1" Text="{Binding RedInfo, StringFormat='Red: {0}'}" FontSize="12" Foreground="#4a5568"/>
                             </Grid>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🔥" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding CpuUso, StringFormat='CPU: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="2" Text="|" FontSize="12" Foreground="#d2dce8" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="3" Text="{Binding CpuTemp, StringFormat='Temp: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4" Visibility="{Binding CpuFreq, Converter={StaticResource NullToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🐢" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding CpuFreq, StringFormat='Freq: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="2" Text="|" FontSize="12" Foreground="#d2dce8" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Latencia, StringFormat='Ping: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4" Visibility="{Binding PlanEnergia, Converter={StaticResource NullToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="📊" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PlanEnergia, StringFormat='Plan: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4" Visibility="{Binding BateriaInfo, Converter={StaticResource NullToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🔋" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding BateriaInfo}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4" Visibility="{Binding PageFileInfo, Converter={StaticResource NullToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🧩" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PageFileInfo, StringFormat='Page file: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -439,6 +487,54 @@
                                        TextWrapping="Wrap" Margin="0,0,0,8" LineHeight="20"/>
                             <TextBlock Text="{Binding IaProvider, StringFormat='— {0}'}" FontSize="10"
                                        Foreground="#95a5a6" FontStyle="Italic" HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Chat IA -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="🧠 Chat IA" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
+
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
+                                <ItemsControl ItemsSource="{Binding ChatMessages}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,3" Padding="10,6" CornerRadius="8">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#f8f9fa"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Role}" Value="user">
+                                                                <Setter Property="Background" Value="#e3f2fd"/>
+                                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding Text}" FontSize="12" Foreground="#2c3e50"
+                                                           TextWrapping="Wrap" MaxWidth="400"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" x:Name="ChatInputBox" Text="{Binding ChatInput, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="12" Padding="6,4" BorderBrush="#d2dce8" BorderThickness="1" Margin="0,0,6,0"
+                                         KeyDown="ChatInput_KeyDown"/>
+                                <Button Grid.Column="1" Content="Enviar" Command="{Binding ChatSendCommand}"
+                                        FontSize="12" Padding="12,4" Background="#6c5ce7" Foreground="White"
+                                        BorderThickness="0" Cursor="Hand"
+                                        IsEnabled="{Binding ChatCargando, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
+                            </Grid>
+                            <TextBlock Text="Escribe tu pregunta sobre el diagnóstico..." FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 

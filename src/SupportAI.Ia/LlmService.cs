@@ -59,4 +59,24 @@ public class LlmService
 
         return await _rules.AnalyzeAsync(anonymized, ct);
     }
+
+    public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
+    {
+        foreach (var provider in _providers)
+        {
+            if (!provider.Disponible) continue;
+            if (provider is RulesProvider) continue;
+            try
+            {
+                return await provider.ChatAsync(messages, ct);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Trace.WriteLine($"[LlmService] Chat error con {provider.Name}: {ex.Message}");
+            }
+        }
+
+        // Fallback a reglas: dar una respuesta genérica
+        return "Sin conexión IA online. Configura tus API keys en ⚙️ para activar el chat con IA. Mientras tanto, usa el botón 'Analizar con IA' para el análisis local.";
+    }
 }

@@ -31,4 +31,13 @@ SupportAI USB — Comandos CLI:
 """;
         MessageBox.Show(help, "Comandos CLI", MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
+    private void ChatInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if (_vm.ChatSendCommand.CanExecute(null))
+                _vm.ChatSendCommand.Execute(null);
+        }
+    }
 }

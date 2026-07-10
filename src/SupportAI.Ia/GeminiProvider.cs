@@ -17,6 +17,40 @@ public class GeminiProvider : ILlmProvider
     public string Name => "Gemini (Google)";
     public bool Disponible => !string.IsNullOrWhiteSpace(_apiKey);
 
+    public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
+    {
+        var url = $"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={_apiKey}";
+
+        var contents = messages.Where(m => m.Role != "system").Select(m => new
+        {
+            role = m.Role == "assistant" ? "model" : "user",
+            parts = new[] { new { text = m.Text } }
+        });
+
+        var systemText = messages.FirstOrDefault(m => m.Role == "system").Text ?? "";
+
+        var body = new
+        {
+            systemInstruction = new { parts = new[] { new { text = systemText } } },
+            contents,
+            generationConfig = new { maxOutputTokens = 1000, temperature = 0.3 }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(body)
+        };
+
+        var response = await _sharedHttp.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadFromJsonAsync<GeminiResponse>(ct);
+        var text = json?.candidates?[0]?.content?.parts?[0]?.text;
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Respuesta vacía de Gemini");
+        return text;
+    }
+
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var prompt = BuildPrompt(diag);

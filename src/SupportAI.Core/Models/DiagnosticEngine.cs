@@ -198,6 +198,148 @@ public static class DiagnosticEngine
             });
         }
 
+        // CPU temperatura alta
+        if (diag.Salud?.CpuTemperatura > 80)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Alto,
+                Modulo = "Salud",
+                Titulo = "CPU sobrecalentándose",
+                Detalle = $"La temperatura de la CPU es {diag.Salud.CpuTemperatura}°C. Por encima de 80°C puede haber throttling y daños a largo plazo.",
+                ReparacionesSugeridas = [],
+                AccionLabel = "Ver procesos",
+                AccionTarget = "taskmgr"
+            });
+        }
+        else if (diag.Salud?.CpuTemperatura > 70 && diag.Salud.CpuTemperatura > 0)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Medio,
+                Modulo = "Salud",
+                Titulo = "CPU calentando",
+                Detalle = $"La temperatura de la CPU es {diag.Salud.CpuTemperatura}°C. Revisa la ventilación y el polvo acumulado.",
+                ReparacionesSugeridas = []
+            });
+        }
+
+        // CPU uso alto
+        if (diag.Salud?.CpuUsoPorcentaje > 90)
+        {
+            var topProc = diag.Salud.ProcesosPesados.FirstOrDefault();
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Alto,
+                Modulo = "Salud",
+                Titulo = "CPU saturada",
+                Detalle = $"Uso de CPU al {diag.Salud.CpuUsoPorcentaje}%. {(topProc is not null ? $"El proceso {topProc.Nombre} consume más recursos." : "")}",
+                ReparacionesSugeridas = [],
+                AccionLabel = "Ver procesos",
+                AccionTarget = "taskmgr"
+            });
+        }
+        else if (diag.Salud?.CpuUsoPorcentaje > 75)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Medio,
+                Modulo = "Salud",
+                Titulo = "Uso de CPU elevado",
+                Detalle = $"Uso de CPU al {diag.Salud.CpuUsoPorcentaje}%.",
+                ReparacionesSugeridas = []
+            });
+        }
+
+        // CPU throttling
+        if (diag.Salud?.CpuThrottling == true)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Medio,
+                Modulo = "Salud",
+                Titulo = "CPU con throttling",
+                Detalle = $"La frecuencia actual ({diag.Salud.FrecuenciaActualMHz} MHz) es menor a la esperada. El sistema está ralentizando la CPU para evitar sobrecalentamiento.",
+                ReparacionesSugeridas = []
+            });
+        }
+
+        // SMART disco malo
+        if (diag.Hardware?.Discos is not null)
+        {
+            foreach (var d in diag.Hardware.Discos.Where(d => !string.IsNullOrWhiteSpace(d.SmartStatus) && !d.SmartStatus.Equals("Healthy", StringComparison.OrdinalIgnoreCase)))
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Critico,
+                    Modulo = "Disco",
+                    Titulo = $"Disco {d.Modelo} con errores SMART",
+                    Detalle = $"SMART reporta estado: {d.SmartStatus}. Este disco puede fallar pronto. Haz copia de seguridad inmediatamente.",
+                    ReparacionesSugeridas = [],
+                    AccionLabel = "Abrir Administrador de discos",
+                    AccionTarget = "diskmgmt.msc"
+                });
+            }
+        }
+
+        // Batería desgastada
+        if (diag.Hardware?.Bateria is not null)
+        {
+            var bat = diag.Hardware.Bateria;
+            if (bat.DesgastePorcentaje > 50)
+            {
+                problemas.Add(new Problema
+                {
+                    Gravedad = Gravedad.Medio,
+                    Modulo = "Hardware",
+                    Titulo = "Batería muy desgastada",
+                    Detalle = $"Desgaste de batería: {bat.DesgastePorcentaje}%. Carga actual: {bat.CargaPorcentaje}%. Considera reemplazar la batería.",
+                    ReparacionesSugeridas = []
+                });
+            }
+        }
+
+        // Plan de energía en ahorro
+        if (!string.IsNullOrWhiteSpace(diag.Salud?.PlanEnergia) && diag.Salud.PlanEnergia.Contains("Ahorro", StringComparison.OrdinalIgnoreCase))
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Bajo,
+                Modulo = "Salud",
+                Titulo = "Plan de energía en Ahorro",
+                Detalle = $"El plan de energía activo es '{diag.Salud.PlanEnergia}'. Esto limita el rendimiento. Cambia a Alto Rendimiento si necesitas más velocidad.",
+                ReparacionesSugeridas = [],
+                AccionLabel = "Configuración de energía",
+                AccionTarget = "powercfg.cpl"
+            });
+        }
+
+        // Latencia alta
+        if (diag.Red?.Internet == true && diag.Red.LatenciaMs > 200)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Bajo,
+                Modulo = "Red",
+                Titulo = "Latencia de red alta",
+                Detalle = $"La latencia a 8.8.8.8 es {diag.Red.LatenciaMs} ms. Puede causar lag en juegos y videollamadas. Revisa tu conexión o cambia de DNS.",
+                ReparacionesSugeridas = ["rep.dns.flush"]
+            });
+        }
+
+        // Page file casi lleno
+        if (diag.Salud?.PageFileTotalMB > 0 && diag.Salud.PageFileUsadoMB / diag.Salud.PageFileTotalMB > 0.9)
+        {
+            problemas.Add(new Problema
+            {
+                Gravedad = Gravedad.Medio,
+                Modulo = "Salud",
+                Titulo = "Archivo de paginación casi lleno",
+                Detalle = $"Page file: {diag.Salud.PageFileUsadoMB} MB usados de {diag.Salud.PageFileTotalMB} MB. Considera ampliar la memoria virtual.",
+                ReparacionesSugeridas = []
+            });
+        }
+
         var puntuacion = CalcularPuntuacion(diag, problemas);
         return (problemas, puntuacion);
     }

@@ -12,6 +12,7 @@ public record HardwareInfo
     [JsonPropertyName("bios")] public BiosInfo? BIOS { get; init; }
     [JsonPropertyName("placa")] public PlacaInfo? Placa { get; init; }
     [JsonPropertyName("so")] public OsInfo? SO { get; init; }
+    [JsonPropertyName("bateria")] public BatteryInfo? Bateria { get; init; }
 }
 
 public record CpuInfo
@@ -40,6 +41,7 @@ public record DiscoInfo
     [JsonPropertyName("modelo")] public string Modelo { get; init; } = "";
     [JsonPropertyName("sizeBytes")] public long SizeBytes { get; init; }
     [JsonPropertyName("status")] public string Status { get; init; } = "";
+    [JsonPropertyName("smartStatus")] public string SmartStatus { get; init; } = "";
 }
 
 public record DiscoLogicoInfo
@@ -72,4 +74,13 @@ public record OsInfo
     [JsonPropertyName("build")] public string Build { get; init; } = "";
     [JsonPropertyName("instalado")] public DateTime? Instalado { get; init; }
     [JsonPropertyName("ultimoArranque")] public DateTime? UltimoArranque { get; init; }
+}
+
+public record BatteryInfo
+{
+    [JsonPropertyName("cargaPorcentaje")] public int CargaPorcentaje { get; init; }
+    [JsonPropertyName("desgastePorcentaje")] public int DesgastePorcentaje { get; init; }
+    [JsonPropertyName("ciclos")] public int Ciclos { get; init; }
+    [JsonPropertyName("tiempoRestanteMin")] public int TiempoRestanteMin { get; init; }
+    [JsonPropertyName("conectada")] public bool Conectada { get; init; }
 }
