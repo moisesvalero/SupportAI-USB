@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/WPF-Modern%20UI-orange?style=for-the-badge&logo=windows&logoColor=white" alt="WPF UI" />
   <img src="https://img.shields.io/badge/Platform-Windows-0078D7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   <img src="https://img.shields.io/badge/License-MIT-4caf50?style=for-the-badge" alt="License MIT" />
+  <img src="https://github.com/moisesvalero/SupportAI-USB/actions/workflows/ci.yml/badge.svg" alt="CI" />
 </p>
 
 ---
@@ -22,13 +23,16 @@ SupportAI USB is a **portable Windows diagnostic and automated repair assistant*
 ### ✨ Key Features
 
 * **⚡ Ultra-fast Telemetry:** Instantly reads CPU, RAM, GPU, storage health, logical drives, active network interfaces, and critical Windows event logs.
+* **🎨 Modern WPF UI:** Professional interface with severity-coded problem cards, inline action buttons (open Event Viewer, Disk Cleanup, Device Manager, etc.), and animated progress bar during scans.
+* **🔧 Service Management:** Detects failing services, filters out uninstalled apps, and allows one-click service start with automatic UAC elevation.
 * **🧠 Hybrid AI Engine:** 
   * **Online (Primary):** OpenRouter (API key) with automatic failover to Google Gemini.
   * **Local Offline:** Llama.cpp GGUF local model execution.
   * **Fallback Rules:** Offline static rules engine to guarantee operation under any conditions.
 * **🛡️ Built-in Privacy Filter:** Automatically redacts usernames, machine names, domains, serial numbers, IP/DNS addresses, and profile paths before sending data to AI endpoints.
-* **🧰 One-Click Repairs:** Instantly trigger PowerShell/CMD automation scripts for common system, network, and registry issues.
-* **📦 Portable Single-File Build:** Package everything into a standalone executable ready for your IT support USB drive.
+* **🧰 One-Click Repairs:** Instantly trigger PowerShell/CMD automation scripts for common system, network, and registry issues. Repairs requiring admin rights show a confirmation dialog and UAC prompt.
+* **📄 PDF Reports:** Generate professional diagnostic PDFs via Save File dialog.
+* **📦 Portable Build:** Package everything into a standalone executable ready for your IT support USB drive.
 
 ### 🚀 Quick Start
 
@@ -36,6 +40,10 @@ SupportAI USB is a **portable Windows diagnostic and automated repair assistant*
 Launch the modern WPF desktop dashboard to run automated scans and execute repairs visually:
 ```powershell
 dotnet run --project src\SupportAI.App.Wpf
+```
+Or double-click the shortcut created at your desktop after building:
+```powershell
+dotnet build src\SupportAI.App.Wpf\SupportAI.App.Wpf.csproj -c Release
 ```
 
 #### 📟 Run Command-Line Interface (CLI)
@@ -102,13 +110,16 @@ SupportAI USB es un **asistente portátil de diagnóstico y reparación automát
 ### ✨ Características Clave
 
 * **⚡ Telemetría ultrarrápida:** Lee instantáneamente CPU, RAM, GPU, estado del almacenamiento, unidades lógicas, interfaces de red activas y registros de eventos críticos de Windows.
+* **🎨 UI WPF moderna:** Interfaz profesional con tarjetas de problemas codificadas por severidad, botones de acción en línea (Visor de eventos, Liberador de espacio, Administrador de dispositivos, etc.) y barra de progreso animada durante el análisis.
+* **🔧 Gestión de servicios:** Detecta servicios que no arrancan, filtra los de apps desinstaladas y permite iniciarlos con un clic + elevación automática UAC.
 * **🧠 Motor de IA híbrido:**
   * **Online (Principal):** OpenRouter (API key) con conmutación por error automática a Google Gemini.
   * **Local Offline:** Ejecución del modelo local GGUF de Llama.cpp.
   * **Reglas de respaldo:** Motor de reglas estáticas offline para garantizar el funcionamiento bajo cualquier condición.
 * **🛡️ Filtro de privacidad integrado:** Redacta automáticamente nombres de usuario, nombres de equipo, dominios, números de serie, direcciones IP/DNS y rutas de perfiles antes de enviar datos a la IA.
-* **🧰 Reparaciones en un clic:** Ejecuta al instante scripts de automatización de PowerShell/CMD para problemas comunes de sistema, red y registro.
-* **📦 Compilación portátil en un solo archivo:** Empaqueta todo en un ejecutable independiente listo para tu pendrive de soporte técnico.
+* **🧰 Reparaciones en un clic:** Ejecuta al instante scripts de automatización de PowerShell/CMD. Las reparaciones que requieren admin muestran confirmación y UAC.
+* **📄 Informes PDF:** Genera informes PDF profesionales con diálogo Guardar como.
+* **📦 Compilación portátil:** Empaqueta todo en un ejecutable independiente listo para tu pendrive de soporte técnico.
 
 ### 🚀 Inicio Rápido
 
@@ -116,6 +127,10 @@ SupportAI USB es un **asistente portátil de diagnóstico y reparación automát
 Inicia el panel moderno de escritorio WPF para realizar análisis y ejecutar reparaciones visualmente:
 ```powershell
 dotnet run --project src\SupportAI.App.Wpf
+```
+O haz doble clic al acceso directo creado en el escritorio tras compilar:
+```powershell
+dotnet build src\SupportAI.App.Wpf\SupportAI.App.Wpf.csproj -c Release
 ```
 
 #### 📟 Ejecutar la interfaz de línea de comandos (CLI)
