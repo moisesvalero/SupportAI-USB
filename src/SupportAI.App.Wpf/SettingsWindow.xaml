@@ -1,7 +1,7 @@
 <Window x:Class="SupportAI.App.Wpf.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Configuración" Height="300" Width="480"
+        Title="Configuración" Height="340" Width="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#f5f6fa"
@@ -16,6 +16,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -23,17 +25,46 @@
         <TextBlock Grid.Row="0" Text="Claves de API para análisis IA online" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <TextBlock Grid.Row="1" Text="Sin claves el análisis funciona offline con reglas locales." FontSize="11" Foreground="#636e72" Margin="0,0,0,16"/>
 
+        <!-- OpenRouter -->
         <TextBlock Grid.Row="2" Text="OpenRouter Key" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-        <TextBox Grid.Row="3" x:Name="OpenRouterBox" FontSize="12" Padding="6,4"
-                 BorderBrush="#d2dce8" BorderThickness="1" Margin="0,0,0,12"
-                 TextWrapping="NoWrap"/>
+        <Grid Grid.Row="3" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" x:Name="OpenRouterBox" FontSize="12" Padding="6,4"
+                     BorderBrush="#d2dce8" BorderThickness="1" Margin="0,0,6,0"
+                     TextWrapping="NoWrap"/>
+            <Button Grid.Column="1" Content="Probar" Click="TestOpenRouter_Click"
+                    FontSize="11" Padding="10,4" Background="#3498db" Foreground="White"
+                    BorderThickness="0" Cursor="Hand" Margin="0,0,6,0"/>
+            <TextBlock Grid.Column="2" x:Name="OpenRouterStatus" FontSize="14"
+                       VerticalAlignment="Center" Width="20"/>
+        </Grid>
 
+        <!-- Gemini -->
         <TextBlock Grid.Row="4" Text="Gemini Key" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-        <TextBox Grid.Row="5" x:Name="GeminiBox" FontSize="12" Padding="6,4"
-                 BorderBrush="#d2dce8" BorderThickness="1" Margin="0,0,0,12"
-                 TextWrapping="NoWrap"/>
+        <Grid Grid.Row="5" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" x:Name="GeminiBox" FontSize="12" Padding="6,4"
+                     BorderBrush="#d2dce8" BorderThickness="1" Margin="0,0,6,0"
+                     TextWrapping="NoWrap"/>
+            <Button Grid.Column="1" Content="Probar" Click="TestGemini_Click"
+                    FontSize="11" Padding="10,4" Background="#3498db" Foreground="White"
+                    BorderThickness="0" Cursor="Hand" Margin="0,0,6,0"/>
+            <TextBlock Grid.Column="2" x:Name="GeminiStatus" FontSize="14"
+                       VerticalAlignment="Center" Width="20"/>
+        </Grid>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+        <!-- Resultado detallado -->
+        <TextBlock Grid.Row="6" x:Name="ResultDetail" FontSize="11" Foreground="#636e72" Margin="0,0,0,8"/>
+
+        <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Guardar" Click="Guardar_Click"
                     FontSize="12" Padding="16,6" Background="#27ae60" Foreground="White"
                     BorderThickness="0" Cursor="Hand" Margin="0,0,8,0" Width="90"/>
