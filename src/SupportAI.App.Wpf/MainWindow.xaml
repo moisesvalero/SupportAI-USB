@@ -112,6 +112,8 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
                         Background="#e94560" Margin="0,0,12,0">
@@ -124,7 +126,11 @@
                     <TextBlock Text="Asistente portátil de diagnóstico para Windows"
                                FontSize="11" Foreground="#8d99ae"/>
                 </StackPanel>
-                <Button Grid.Column="2" Content="▶ Escanear" Command="{Binding ScanCommand}"
+                <Button Grid.Column="2" Content="⚙️" Command="{Binding OpenSettingsCommand}"
+                        FontSize="16" Background="Transparent" Foreground="#8d99ae"
+                        BorderThickness="0" Cursor="Hand" Width="34" Height="34"
+                        ToolTip="Configuración"/>
+                <Button Grid.Column="4" Content="▶ Escanear" Command="{Binding ScanCommand}"
                         FontSize="13" FontWeight="SemiBold"
                         Background="#e94560" Foreground="White"
                         BorderThickness="0" Padding="20,8" Cursor="Hand"

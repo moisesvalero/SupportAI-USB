@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
+using SupportAI.App.Wpf.Services;
 using SupportAI.Collectors.Windows;
 using SupportAI.Core.Models;
 using SupportAI.Ia;
@@ -36,6 +37,7 @@ public class MainViewModel : INotifyPropertyChanged
         AbrirAccionCommand = new RelayCommand(AbrirAccion);
         ToggleExpandirCommand = new RelayCommand(ToggleExpandir);
         IniciarServicioCommand = new AsyncRelayCommand(async param => await IniciarServicio(param));
+        OpenSettingsCommand = new RelayCommand(_ => AbrirSettings());
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
 
@@ -63,6 +65,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand AbrirAccionCommand { get; }
     public ICommand ToggleExpandirCommand { get; }
     public ICommand IniciarServicioCommand { get; }
+    public ICommand OpenSettingsCommand { get; }
 
     public string? ProblemaExpandidoId
     {
@@ -130,6 +133,14 @@ public class MainViewModel : INotifyPropertyChanged
         {
             StatusText = $"❌ '{nombreCorto}': {ex.Message}";
         }
+    }
+
+    private void AbrirSettings()
+    {
+        var win = new SettingsWindow { Owner = Application.Current.MainWindow };
+        win.ShowDialog();
+        // Recreate LlmService on next use so it picks up new keys
+        _llm = null;
     }
 
     private void AbrirAccion(object? param)
@@ -414,6 +425,17 @@ public class MainViewModel : INotifyPropertyChanged
 
     private static string? GetKeyFromFile(string name)
     {
+        // Primero settings.json (configuración desde UI)
+        var settings = Services.SettingsService.Load();
+        var key = name switch
+        {
+            "OPENROUTER_KEY" => settings.OpenRouterKey,
+            "GEMINI_KEY" => settings.GeminiKey,
+            _ => null
+        };
+        if (!string.IsNullOrWhiteSpace(key)) return key;
+
+        // Fallback al archivo .KEY junto al exe
         var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $".{name}");
         return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
     }
