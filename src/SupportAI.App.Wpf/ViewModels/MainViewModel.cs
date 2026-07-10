@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
 using SupportAI.Collectors.Windows;
 using SupportAI.Core.Models;
 using SupportAI.Ia;
@@ -454,16 +455,21 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task ExportPdfAsync()
     {
         if (!TieneDatos) return;
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Guardar informe PDF",
+            Filter = "PDF (*.pdf)|*.pdf",
+            FileName = $"informe_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
         StatusText = "Generando PDF...";
         try
         {
-            var path = Path.Combine(
-                Environment.CurrentDirectory, "informes",
-                $"informe_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-            await Services.InformeService.GenerateAsync(_diagnostico, path);
-            StatusText = $"✅ PDF guardado: {path}";
+            await Services.InformeService.GenerateAsync(_diagnostico, dialog.FileName);
+            StatusText = $"✅ PDF guardado: {dialog.FileName}";
         }
         catch (Exception ex)
         {
