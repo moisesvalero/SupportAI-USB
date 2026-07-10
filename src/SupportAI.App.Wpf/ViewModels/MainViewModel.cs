@@ -231,8 +231,14 @@ public class MainViewModel : INotifyPropertyChanged
     public bool HayProblemas => Problemas.Count > 0;
     public bool TieneDatos => Puntuacion > 0;
     public List<ServicioInfo> ServiciosFallando => (_diagnostico.Windows?.ServiciosFallando ?? [])
-        .Where(s => !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s))
+        .Where(s => !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s) && !EsUpdaterConocido(s))
         .ToList();
+
+    private static readonly string[] UpdaterPrefixes = ["edgeupdate", "edgeupdatem", "googleupdate", "googleupdater", "braveupdate", "brave", "firefoxupdate", "mozillamaintenance", "adobeupdate", "adobearm"];
+
+    private static bool EsUpdaterConocido(ServicioInfo s) =>
+        !string.IsNullOrWhiteSpace(s.NombreCorto) &&
+        UpdaterPrefixes.Any(p => s.NombreCorto.StartsWith(p, StringComparison.OrdinalIgnoreCase));
     public bool ProblemaExpandido => _problemaExpandidoId is not null;
 
     public bool Escaneando
