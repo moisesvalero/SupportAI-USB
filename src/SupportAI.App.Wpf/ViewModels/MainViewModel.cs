@@ -18,7 +18,6 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly PowerShellEngine _engine = new();
     private LlmService? _llm;
     private Diagnostico _diagnostico = new();
-    private bool _iaConsent;
     private bool _reparando;
     private CancellationTokenSource? _repairCts;
     private string? _problemaExpandidoId;
@@ -231,13 +230,7 @@ public class MainViewModel : INotifyPropertyChanged
     public string Uptime => _diagnostico.Salud is { } s ? $"{s.DiasActivo}d {s.HorasActivo}h" : "";
     public string RedInfo => _diagnostico.Red?.Internet == true ? "Conectado" : "Sin internet";
 
-    public bool IaConsent
-    {
-        get => _iaConsent;
-        set { _iaConsent = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
-    }
-
-    public bool PuedeAnalizarConIa => _iaConsent && TieneDatos && !_iaCargando && !_reparando && !_escaneando;
+    public bool PuedeAnalizarConIa => TieneDatos && !_iaCargando && !_reparando && !_escaneando;
 
     public bool Reparando
     {
@@ -445,7 +438,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task AnalyzeWithIaAsync()
     {
-        if (!_iaConsent || !TieneDatos) return;
+        if (!TieneDatos) return;
         IaCargando = true;
         IaExplicacion = "";
         IaProvider = "";

@@ -282,10 +282,6 @@
                         <StackPanel>
                             <TextBlock Text="Análisis IA" FontSize="13" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
                             <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
-                            <CheckBox IsChecked="{Binding IaConsent}" Margin="0,0,0,8">
-                                <TextBlock Text="Autorizo envío de datos técnicos al proveedor IA" 
-                                           FontSize="11" Foreground="#4a5568" TextWrapping="Wrap" MaxWidth="220"/>
-                            </CheckBox>
                             <Button Content="Analizar con IA" Command="{Binding AnalyzeWithIaCommand}"
                                     FontSize="12" Padding="12,6" Background="#6c5ce7" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
