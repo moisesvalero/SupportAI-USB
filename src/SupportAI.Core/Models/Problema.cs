@@ -11,6 +11,9 @@ public record Problema
     [JsonPropertyName("detalle")] public string Detalle { get; init; } = "";
     [JsonPropertyName("reparacionesSugeridas")] public List<string> ReparacionesSugeridas { get; init; } = [];
     [JsonPropertyName("reparacionesAplicadas")] public List<string> ReparacionesAplicadas { get; init; } = [];
+
+    [JsonIgnore] public string? AccionLabel { get; init; }
+    [JsonIgnore] public string? AccionTarget { get; init; }
 }
 
 public enum Gravedad

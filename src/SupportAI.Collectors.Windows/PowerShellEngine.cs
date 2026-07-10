@@ -47,9 +47,9 @@ $r = [PSCustomObject]@{
     hardware = [PSCustomObject]@{
         cpu = Get-CimInstance Win32_Processor | Select-Object @{N='nombre';E={$_.Name}}, @{N='nucleos';E={$_.NumberOfCores}}, @{N='hilos';E={$_.NumberOfLogicalProcessors}}, @{N='maxFrecuenciaMHz';E={$_.MaxClockSpeed}}
         ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{N='totalBytes';E={$_.Sum}}
-        gpu = Get-CimInstance Win32_VideoController | Select-Object @{N='nombre';E={$_.Name}}, @{N='vramBytes';E={$_.AdapterRAM}}, @{N='driverVersion';E={$_.DriverVersion}}
-        discos = Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}}
-        discosLogicos = Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3 | Select-Object @{N='letra';E={$_.DeviceID}}, @{N='sizeBytes';E={$_.Size}}, @{N='freeBytes';E={$_.FreeSpace}}
+        gpu = @(Get-CimInstance Win32_VideoController | Select-Object @{N='nombre';E={$_.Name}}, @{N='vramBytes';E={$_.AdapterRAM}}, @{N='driverVersion';E={$_.DriverVersion}})
+        discos = @(Get-CimInstance Win32_DiskDrive | Select-Object @{N='modelo';E={$_.Model}}, @{N='sizeBytes';E={$_.Size}}, @{N='status';E={$_.Status}})
+        discosLogicos = @(Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3 | Select-Object @{N='letra';E={$_.DeviceID}}, @{N='sizeBytes';E={$_.Size}}, @{N='freeBytes';E={$_.FreeSpace}})
         bios = Get-CimInstance Win32_BIOS | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='version';E={$_.SMBIOSBIOSVersion}}
         placa = Get-CimInstance Win32_BaseBoard | Select-Object @{N='fabricante';E={$_.Manufacturer}}, @{N='producto';E={$_.Product}}
         so = $os | Select-Object @{N='caption';E={$_.Caption}}, @{N='version';E={$_.Version}}, @{N='build';E={$_.BuildNumber}}, @{N='instalado';E={if($_.InstallDate){$_.InstallDate.ToString('o')}}}, @{N='ultimoArranque';E={if($_.LastBootUpTime){$_.LastBootUpTime.ToString('o')}}}
@@ -59,29 +59,29 @@ $r = [PSCustomObject]@{
         horasActivo = [math]::Max(0, [int](Get-Date).Subtract($os.LastBootUpTime).Hours)
         ramLibreMB = [math]::Round($os.FreePhysicalMemory / 1024, 1)
         ramTotalMB = [math]::Round($os.TotalVisibleMemorySize / 1024, 1)
-        procesosPesados = Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 8 @{N='nombre';E={$_.Name}}, @{N='workingSetMB';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, @{N='pid';E={$_.ProcessId}}
-        programasInicio = Get-CimInstance Win32_StartupCommand | Select-Object @{N='nombre';E={$_.Name}}, @{N='comando';E={$_.Command}}, @{N='ubicacion';E={$_.Location}}
+        procesosPesados = @(Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 8 @{N='nombre';E={$_.Name}}, @{N='workingSetMB';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, @{N='pid';E={$_.ProcessId}})
+        programasInicio = @(Get-CimInstance Win32_StartupCommand | Select-Object @{N='nombre';E={$_.Name}}, @{N='comando';E={$_.Command}}, @{N='ubicacion';E={$_.Location}})
     }
     windows = [PSCustomObject]@{
         updatePendiente = $updatePendiente
         archivosCorruptos = $archivosCorruptos
-        serviciosFallando = Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}}
-        eventosCriticos = Get-WinEvent -FilterHashtable @{LogName='System';Level=1,2} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{N='id';E={$_.Id}}, @{N='nivel';E={$_.Level}}, @{N='fuente';E={$_.ProviderName}}, @{N='mensaje';E={$_.Message}}, @{N='timestamp';E={$_.TimeCreated}}
+        serviciosFallando = @(Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}})
+        eventosCriticos = @(Get-WinEvent -FilterHashtable @{LogName='System';Level=1,2} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{N='id';E={$_.Id}}, @{N='nivel';E={$_.Level}}, @{N='fuente';E={$_.ProviderName}}, @{N='mensaje';E={$_.Message}}, @{N='timestamp';E={if($_.TimeCreated){$_.TimeCreated.ToString('o')}}})
     }
     red = [PSCustomObject]@{
         dns = (Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses } | Select-Object -First 1).ServerAddresses[0]
         gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
-        adaptadores = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -First 3 @{N='nombre';E={$_.Name}}, @{N='ip';E={(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress}}, @{N='dhcpActivo';E={$true}}, @{N='tipo';E={$_.MediaType}}
+        adaptadores = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -First 3 @{N='nombre';E={$_.Name}}, @{N='ip';E={(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress}}, @{N='dhcpActivo';E={$true}}, @{N='tipo';E={$_.MediaType}})
         internet = (Test-Connection 8.8.8.8 -Count 1 -Quiet -ErrorAction SilentlyContinue)
     }
     seguridad = [PSCustomObject]@{
         defenderActivo = (Get-MpComputerStatus -ErrorAction SilentlyContinue).AntivirusEnabled
-        firewallActivo = (Get-NetFirewallProfile -ErrorAction SilentlyContinue | Where-Object Name -eq 'Domain').Enabled
+        firewallActivo = [bool](Get-NetFirewallProfile -ErrorAction SilentlyContinue | Where-Object Name -eq 'Domain').Enabled
         bitlockerActivo = (Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue).ProtectionStatus -eq 1
-        ultimoAnalisis = (Get-MpComputerStatus -ErrorAction SilentlyContinue).LastQuickScanDateTime
+        ultimoAnalisis = [string](Get-MpComputerStatus -ErrorAction SilentlyContinue).LastQuickScanDateTime
     }
     drivers = [PSCustomObject]@{
-        dispositivosError = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 -and $_.ConfigManagerErrorCode -ne 22 -and $_.ConfigManagerErrorCode -ne 24 } | Select-Object -First 10 @{N='nombre';E={$_.Name}}, @{N='codigoError';E={$_.ConfigManagerErrorCode}}, @{N='descripcion';E={$_.Description}}
+        dispositivosError = @(Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 -and $_.ConfigManagerErrorCode -ne 22 -and $_.ConfigManagerErrorCode -ne 24 } | Select-Object -First 10 @{N='nombre';E={$_.Name}}, @{N='codigoError';E={$_.ConfigManagerErrorCode}}, @{N='descripcion';E={$_.Description}})
     }
 }
 $r | ConvertTo-Json -Depth 5
@@ -107,7 +107,7 @@ $r | ConvertTo-Json -Depth 5
         var readErrorTask = process.StandardError.ReadToEndAsync(ct);
         var processExitTask = process.WaitForExitAsync(ct);
 
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30), ct);
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(90), ct);
 
         var completedTask = await Task.WhenAny(processExitTask, timeoutTask);
         if (completedTask == timeoutTask)

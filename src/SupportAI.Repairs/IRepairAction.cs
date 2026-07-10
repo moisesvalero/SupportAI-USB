@@ -6,6 +6,7 @@ public interface IRepairAction
     string Titulo { get; }
     string Descripcion { get; }
     string Comando { get; }
+    bool RequiresElevation => false;
     Task<RepairResult> ExecuteAsync(bool dryRun = false, CancellationToken ct = default);
 }
 

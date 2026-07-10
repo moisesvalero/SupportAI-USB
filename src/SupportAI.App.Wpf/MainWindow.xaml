@@ -6,11 +6,14 @@
         xmlns:vm="clr-namespace:SupportAI.App.Wpf.ViewModels"
         xmlns:conv="clr-namespace:SupportAI.App.Wpf.Converters"
         mc:Ignorable="d"
-        Title="SupportAI USB" Height="700" Width="1000"
+        Title="SupportAI USB — Diagnóstico Profesional" Height="800" Width="1100"
         WindowStartupLocation="CenterScreen"
-        Background="#f5f6fa"
+        Background="#eef1f5"
         FontFamily="Segoe UI, sans-serif"
         TextElement.Foreground="#2c3e50"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.BitmapScalingMode="HighQuality"
         d:DataContext="{d:DesignInstance vm:MainViewModel, IsDesignTimeCreatable=False}">
     <Window.Resources>
         <conv:GravedadToColorConverter x:Key="GravedadColor"/>
@@ -18,113 +21,249 @@
         <conv:BoolToCheckColorConverter x:Key="CheckColor"/>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
         <conv:ScoreToColorConverter x:Key="ScoreColor"/>
+        <conv:RepairLabelConverter x:Key="RepairLabel"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVis"/>
 
+        <!-- Card sin blur: borde inferior en vez de sombra -->
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="White"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect Opacity="0.08" BlurRadius="12" ShadowDepth="2"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#e2e8f0"/>
         </Style>
+
+        <!-- Template problema -->
+        <DataTemplate x:Key="ProblemaTemplate">
+            <Border Style="{StaticResource Card}">
+                <Grid>
+                    <Border Width="4" HorizontalAlignment="Left"
+                            Background="{Binding Gravedad, Converter={StaticResource GravedadColor}}"
+                            CornerRadius="6,0,0,6"/>
+                    <StackPanel Margin="16,12,16,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Titulo}" FontWeight="SemiBold"
+                                       FontSize="14" Foreground="#2c3e50"/>
+                            <Border Grid.Column="1" Padding="8,2,8,3" CornerRadius="10"
+                                    Background="{Binding Gravedad, Converter={StaticResource GravedadColor}}"
+                                    Opacity="0.85">
+                                <TextBlock Text="{Binding Gravedad}" FontSize="10" FontWeight="Bold"
+                                           Foreground="White"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding Detalle}" FontSize="12" Foreground="#636e72"
+                                   TextWrapping="Wrap" Margin="0,6,0,8" LineHeight="18"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ItemsControl Grid.Column="0" ItemsSource="{Binding ReparacionesSugeridas}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding Converter={StaticResource RepairLabel}}"
+                                                Command="{Binding DataContext.RepairCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                FontSize="11" Padding="10,4" Margin="0,0,6,4"
+                                                Background="#e8f4f8" Foreground="#2980b9"
+                                                BorderThickness="1" BorderBrush="#bce3f0"
+                                                Cursor="Hand"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Grid.Column="1" HorizontalAlignment="Right"
+                                    Content="{Binding AccionLabel}"
+                                    Command="{Binding DataContext.AbrirAccionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding AccionTarget}"
+                                    Visibility="{Binding AccionLabel, Converter={StaticResource NullToVis}}"
+                                    FontSize="11" Padding="12,4" Margin="0,0,0,4"
+                                    Background="#edf2f7" Foreground="#4a5568"
+                                    BorderThickness="1" BorderBrush="#d2dce8"
+                                    Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#2c3e50" Padding="20,14">
+        <!-- ======= HEADER ======= -->
+        <Border Grid.Row="0" Background="#1a1a2e" Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                        Background="#e94560" Margin="0,0,12,0">
+                    <TextBlock Text="S" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="White"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="SupportAI USB" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBlock Text="Asistente portátil de diagnóstico para Windows"
+                               FontSize="11" Foreground="#8d99ae"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="▶ Escanear" Command="{Binding ScanCommand}"
+                        FontSize="13" FontWeight="SemiBold"
+                        Background="#e94560" Foreground="White"
+                        BorderThickness="0" Padding="20,8" Cursor="Hand"
+                        Width="130" Height="34"/>
+            </Grid>
+        </Border>
+
+        <!-- ======= BARRA DE PROGRESO ======= -->
+        <Border Grid.Row="1" Background="#1a1a2e" Padding="20,0,20,8"
+                Visibility="{Binding Escaneando, Converter={StaticResource BoolVis}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="SupportAI USB" FontSize="22" FontWeight="SemiBold" Foreground="White"/>
-                    <TextBlock Text="Asistente portátil de diagnóstico para Windows" FontSize="12" Foreground="#bdc3c7"/>
-                </StackPanel>
-                <Button Grid.Column="1" Content="Escanear" Command="{Binding ScanCommand}"
-                        FontSize="14" FontWeight="SemiBold"
-                        Background="#27ae60" Foreground="White"
-                        BorderThickness="0" Padding="24,8" Cursor="Hand"
-                        Width="140" Height="36"/>
+                <ProgressBar Grid.Column="0" Value="{Binding ScanProgress}" Minimum="0" Maximum="100"
+                             Height="4" Foreground="#e94560" Background="#2d2d5e"
+                             BorderThickness="0" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="1" Text="{Binding FaseActual}" FontSize="11" Foreground="#8d99ae"
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- Body -->
-        <Grid Grid.Row="1" Margin="20,16,20,0">
+        <!-- ======= BODY ======= -->
+        <Grid Grid.Row="2" Margin="20,16,20,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" MinWidth="280"/>
+                <ColumnDefinition Width="Auto" MinWidth="280" MaxWidth="320"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left Panel -->
+            <!-- LEFT PANEL -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,12,0">
                 <StackPanel>
+
                     <!-- Score -->
                     <Border Style="{StaticResource Card}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Border Width="80" Height="80" CornerRadius="40" Background="White"
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="80" Height="80" CornerRadius="40"
                                     BorderBrush="{Binding Puntuacion, Converter={StaticResource ScoreColor}}"
-                                    BorderThickness="4">
-                                <TextBlock Text="{Binding Puntuacion}" FontSize="32" FontWeight="Bold"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           Foreground="{Binding Puntuacion, Converter={StaticResource ScoreColor}}"/>
+                                    BorderThickness="4" Background="#f8f9fa">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Puntuacion}" FontSize="28" FontWeight="Bold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{Binding Puntuacion, Converter={StaticResource ScoreColor}}"/>
+                                    <TextBlock Text="100" FontSize="10" Foreground="#b2bec3"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </Border>
-                            <Border Width="1"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Salud general" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Tras escanear verás el resultado" FontSize="11" Foreground="#7f8c8d"
-                                           TextWrapping="Wrap" MaxWidth="140"/>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                <TextBlock Text="Salud general" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50"/>
+                                <TextBlock Text="{Binding ScoreLabel}" FontSize="13" FontWeight="Medium"
+                                           Foreground="{Binding Puntuacion, Converter={StaticResource ScoreColor}}"
+                                           Margin="0,2,0,0"/>
+                                <TextBlock Text="Escanea para ver resultados" FontSize="11" Foreground="#95a5a6"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
-                    <!-- System Info -->
+                    <!-- System info -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Sistema" FontSize="14" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding Sistema, TargetNullValue='—'}" FontSize="12" Foreground="#555" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CpuInfo, TargetNullValue='—'}" FontSize="12" Foreground="#555" Margin="0,0,0,4"/>
+                            <TextBlock Text="Sistema" FontSize="13" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
                             <Grid Margin="0,0,0,4">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="💻" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Sistema, TargetNullValue='—'}" FontSize="12" Foreground="#4a5568" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="⚡" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding CpuInfo, TargetNullValue='—'}" FontSize="12" Foreground="#4a5568" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding RamInfo, StringFormat='RAM: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#555"/>
-                                <TextBlock Grid.Column="2" Text="{Binding RamUso, StringFormat='Uso: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#555"/>
+                                <TextBlock Grid.Column="0" Text="🧠" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding RamInfo, StringFormat='RAM: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="2" Text="|" FontSize="12" Foreground="#d2dce8" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="3" Text="{Binding RamUso, StringFormat='Uso: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
                             </Grid>
-                            <TextBlock Text="{Binding Uptime, StringFormat='Activo: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#555"/>
-                            <TextBlock Text="{Binding RedInfo, StringFormat='Red: {0}'}" FontSize="12" Foreground="#555" Margin="0,4,0,0"/>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="⏱" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Uptime, StringFormat='Activo: {0}', TargetNullValue='—'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🌐" FontSize="14"/>
+                                <TextBlock Grid.Column="1" Text="{Binding RedInfo, StringFormat='Red: {0}'}" FontSize="12" Foreground="#4a5568"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
-                    <!-- Module Checks -->
+                    <!-- Module checks -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Componentes" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
+                            <TextBlock Text="Componentes" FontSize="13" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding Modulos}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,2">
+                                        <Grid Margin="0,3">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="26"/>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Ok, Converter={StaticResource BoolIcon}}"
-                                                       Foreground="{Binding Ok, Converter={StaticResource CheckColor}}"
-                                                       FontSize="16" FontWeight="Bold"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Nombre}" FontSize="13" VerticalAlignment="Center"/>
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12"
+                                                    Background="{Binding Ok, Converter={StaticResource CheckColor}}"
+                                                    Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Ok, Converter={StaticResource BoolIcon}}"
+                                                           FontSize="12" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="{Binding Nombre}" FontSize="13"
+                                                       VerticalAlignment="Center" Foreground="#4a5568"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -132,27 +271,28 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- IA config -->
+                    <!-- IA -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Análisis IA" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
+                            <TextBlock Text="Análisis IA" FontSize="13" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
                             <CheckBox IsChecked="{Binding IaConsent}" Margin="0,0,0,8">
-                                <TextBlock Text="He informado al cliente y autoriza el envío de datos técnicos al proveedor IA" 
-                                          FontSize="11" Foreground="#555" TextWrapping="Wrap" MaxWidth="220"/>
+                                <TextBlock Text="Autorizo envío de datos técnicos al proveedor IA" 
+                                           FontSize="11" Foreground="#4a5568" TextWrapping="Wrap" MaxWidth="220"/>
                             </CheckBox>
                             <Button Content="Analizar con IA" Command="{Binding AnalyzeWithIaCommand}"
-                                    FontSize="12" Padding="12,6" Background="#8e44ad" Foreground="White"
+                                    FontSize="12" Padding="12,6" Background="#6c5ce7" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
                                     IsEnabled="{Binding PuedeAnalizarConIa}"
-                                    HorizontalAlignment="Center"/>
+                                    HorizontalAlignment="Center" Width="160"/>
                             <TextBlock Text="{Binding IaProvider, StringFormat='Proveedor: {0}', TargetNullValue='Reglas offline'}" 
-                                       FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,8,0,6"/>
-                            <TextBlock Text="Modelo local (GGUF)" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding ModelStatus}" FontSize="10" Foreground="#7f8c8d" TextWrapping="Wrap"/>
+                                       FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"
+                                       HorizontalAlignment="Center"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,8,0,6"/>
+                            <TextBlock Text="Modelo local (GGUF)" FontSize="11" FontWeight="SemiBold" Foreground="#4a5568"/>
+                            <TextBlock Text="{Binding ModelStatus}" FontSize="10" Foreground="#636e72" TextWrapping="Wrap"/>
                             <Button Content="Descargar llama.cpp + modelo" Command="{Binding DownloadModelCommand}"
-                                    FontSize="10" Padding="8,4" Background="#7f8c8d" Foreground="White"
+                                    FontSize="10" Padding="8,4" Background="#636e72" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
                                     HorizontalAlignment="Left" Margin="0,4,0,0"/>
                         </StackPanel>
@@ -160,53 +300,95 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Right Panel -->
+            <!-- RIGHT PANEL -->
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <!-- Problems -->
+
+                    <!-- Problemas -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Problemas detectados" FontSize="14" FontWeight="SemiBold"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Problemas detectados" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#2c3e50"/>
+                                <Border Grid.Column="1" Padding="10,3,10,4" CornerRadius="12"
+                                        Background="#e74c3c"
+                                        Visibility="{Binding HayProblemas, Converter={StaticResource BoolVis}}">
+                                    <TextBlock Text="{Binding Problemas.Count, StringFormat='{}{0} problema(s)'}"
+                                               FontSize="11" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </Grid>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,10,0,10"
                                        Visibility="{Binding HayProblemas, Converter={StaticResource BoolVis}}"/>
-                            <ItemsControl ItemsSource="{Binding Problemas}" Margin="0,8,0,0">
+                            <ItemsControl ItemsSource="{Binding Problemas}"
+                                          ItemTemplate="{StaticResource ProblemaTemplate}"
+                                          Visibility="{Binding HayProblemas, Converter={StaticResource BoolVis}}"/>
+                            <TextBlock Text="✅ No se detectaron problemas" FontSize="14" Foreground="#27ae60"
+                                       FontWeight="Medium" Margin="0,8,0,0"
+                                       Visibility="{Binding HayProblemas, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Servicios expandidos -->
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding ProblemaExpandido, Converter={StaticResource BoolVis}}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Servicios afectados" FontSize="14" FontWeight="SemiBold" Foreground="#2c3e50"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ServiciosFallando.Count, StringFormat='{}{0} servicio(s)'}"
+                                           FontSize="11" Foreground="#636e72" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,8,0,8"/>
+                            <ItemsControl ItemsSource="{Binding ServiciosFallando}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#fafafa" CornerRadius="6" Padding="12,8" Margin="0,4">
-                                            <StackPanel>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="●" FontSize="14"
-                                                               Foreground="{Binding Gravedad, Converter={StaticResource GravedadColor}}"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Titulo}" FontWeight="SemiBold" FontSize="13"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Gravedad}" FontSize="11"
-                                                               Foreground="#7f8c8d"/>
-                                                </Grid>
-                                                <TextBlock Text="{Binding Detalle}" FontSize="11" Foreground="#555"
-                                                           TextWrapping="Wrap" Margin="16,4,0,0"/>
-                                            </StackPanel>
+                                        <Border Background="#f8f9fa" CornerRadius="6" Padding="12,8" Margin="0,4"
+                                                BorderBrush="#e2e8f0" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding Nombre}" FontSize="12" FontWeight="SemiBold" Foreground="#2c3e50"/>
+                                                    <TextBlock Text="{Binding NombreCorto}" FontSize="10" Foreground="#636e72"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1" Padding="6,2,6,3" CornerRadius="8"
+                                                        Background="#e74c3c" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="Detenido" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <Button Grid.Column="2" Content="Iniciar"
+                                                        Command="{Binding DataContext.IniciarServicioCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding NombreCorto}"
+                                                        FontSize="11" Padding="10,4"
+                                                        Background="#27ae60" Foreground="White"
+                                                        BorderThickness="0" Cursor="Hand"
+                                                        VerticalAlignment="Center"/>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Text="No se detectaron problemas" FontSize="13" Foreground="#27ae60" Margin="0,8,0,0"
-                                       Visibility="{Binding HayProblemas, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Repairs -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Reparaciones" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,8"/>
+                            <TextBlock Text="Reparaciones" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
                             <ItemsControl ItemsSource="{Binding Repairs}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2"/>
+                                        <UniformGrid Columns="3"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
@@ -215,8 +397,8 @@
                                                 Command="{Binding DataContext.RepairCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding Id}"
                                                 FontSize="11" Padding="8,6" Margin="2"
-                                                Background="#ecf0f1" Foreground="#2c3e50"
-                                                BorderThickness="0"
+                                                Background="#f1f3f5" Foreground="#2c3e50"
+                                                BorderThickness="1" BorderBrush="#dee2e6"
                                                 Cursor="Hand"
                                                 ToolTip="{Binding Descripcion}"/>
                                     </DataTemplate>
@@ -226,23 +408,27 @@
                     </Border>
 
                     <!-- IA Results -->
-                    <Border Style="{StaticResource Card}" Visibility="{Binding TieneIaResultado, Converter={StaticResource BoolVis}}">
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding TieneIaResultado, Converter={StaticResource BoolVis}}">
                         <StackPanel>
-                            <TextBlock Text="Análisis IA" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <Separator Background="#ecf0f1" Height="1" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding IaExplicacion}" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding IaProvider, StringFormat='— {0}'}" FontSize="10" Foreground="#95a5a6" FontStyle="Italic"/>
+                            <TextBlock Text="🧠 Análisis IA" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
+                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding IaExplicacion}" FontSize="12" Foreground="#4a5568"
+                                       TextWrapping="Wrap" Margin="0,0,0,8" LineHeight="20"/>
+                            <TextBlock Text="{Binding IaProvider, StringFormat='— {0}'}" FontSize="10"
+                                       Foreground="#95a5a6" FontStyle="Italic" HorizontalAlignment="Right"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Action buttons -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="Exportar PDF" Command="{Binding ExportPdfCommand}"
-                                    FontSize="13" Padding="20,10" Background="#3498db" Foreground="White"
-                                    BorderThickness="0" Cursor="Hand" Margin="0,0,6,0"/>
-                            <Button Content="Ver comandos CLI"
-                                    FontSize="13" Padding="20,10" Background="#95a5a6" Foreground="White"
+                            <Button Content="📄 Exportar PDF" Command="{Binding ExportPdfCommand}"
+                                    FontSize="13" Padding="18,8" Background="#3498db" Foreground="White"
+                                    BorderThickness="0" Cursor="Hand" Margin="0,0,8,0"
+                                    IsEnabled="{Binding TieneDatos}"/>
+                            <Button Content="⌨️ Ver comandos CLI"
+                                    FontSize="13" Padding="18,8" Background="#636e72" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
                                     Click="VerComandos_Click"/>
                         </StackPanel>
@@ -251,9 +437,10 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- Status Bar -->
-        <Border Grid.Row="2" Background="#ecf0f1" Padding="16,6">
-            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#555"/>
+        <!-- ======= STATUS BAR ======= -->
+        <Border Grid.Row="3" Background="#f1f3f5" Padding="16,6">
+            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#636e72"
+                       Visibility="{Binding Escaneando, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
         </Border>
     </Grid>
 </Window>

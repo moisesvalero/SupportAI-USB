@@ -18,7 +18,9 @@ public static class DiagnosticEngine
                     (diag.Salud.ProcesosPesados.Count > 0
                         ? $"El proceso {diag.Salud.ProcesosPesados[0].Nombre} consume {diag.Salud.ProcesosPesados[0].WorkingSetMB} MB."
                         : ""),
-                ReparacionesSugeridas = []
+                ReparacionesSugeridas = [],
+                AccionLabel = "Ver procesos",
+                AccionTarget = "taskmgr"
             });
         }
         else if (diag.Salud?.RamUsoPorcentaje > 75)
@@ -29,7 +31,9 @@ public static class DiagnosticEngine
                 Modulo = "Salud",
                 Titulo = "RAM alta",
                 Detalle = $"La RAM está al {diag.Salud.RamUsoPorcentaje}% de uso.",
-                ReparacionesSugeridas = []
+                ReparacionesSugeridas = [],
+                AccionLabel = "Ver procesos",
+                AccionTarget = "taskmgr"
             });
         }
 
@@ -46,7 +50,9 @@ public static class DiagnosticEngine
                         Modulo = "Disco",
                         Titulo = $"Disco {d.Letra} sin espacio",
                         Detalle = $"El disco {d.Letra} está al {d.UsoPorcentaje}% de capacidad ({d.FreeGB} GB libres de {d.SizeGB} GB).",
-                        ReparacionesSugeridas = ["rep.temp.clean"]
+                        ReparacionesSugeridas = ["rep.temp.clean"],
+                        AccionLabel = "Limpiar disco",
+                        AccionTarget = "cleanmgr"
                     });
                 }
                 else if (d.UsoPorcentaje > 85)
@@ -57,7 +63,9 @@ public static class DiagnosticEngine
                         Modulo = "Disco",
                         Titulo = $"Disco {d.Letra} casi lleno",
                         Detalle = $"El disco {d.Letra} está al {d.UsoPorcentaje}% de capacidad ({d.FreeGB} GB libres).",
-                        ReparacionesSugeridas = ["rep.temp.clean"]
+                        ReparacionesSugeridas = ["rep.temp.clean"],
+                        AccionLabel = "Limpiar disco",
+                        AccionTarget = "cleanmgr"
                     });
                 }
             }
@@ -72,21 +80,26 @@ public static class DiagnosticEngine
                 Modulo = "Salud",
                 Titulo = "PC sin reiniciar",
                 Detalle = $"El equipo lleva {diag.Salud.DiasActivo} días encendido. Un reinicio puede liberar memoria y aplicar actualizaciones.",
-                ReparacionesSugeridas = []
+                ReparacionesSugeridas = [],
+                AccionLabel = "Reiniciar ahora",
+                AccionTarget = "shutdown"
             });
         }
 
         // Servicios
         if (diag.Windows?.ServiciosFallando is { Count: > 0 })
         {
+            var count = diag.Windows.ServiciosFallando.Count;
             var nomServ = string.Join(", ", diag.Windows.ServiciosFallando.Take(3).Select(s => s.NombreCorto));
             problemas.Add(new Problema
             {
                 Gravedad = Gravedad.Medio,
                 Modulo = "Windows",
                 Titulo = "Servicios sin arrancar",
-                Detalle = $"{diag.Windows.ServiciosFallando.Count} servicio(s) que deberían estar activos no lo están: {nomServ}{(diag.Windows.ServiciosFallando.Count > 3 ? " ..." : "")}.",
-                ReparacionesSugeridas = []
+                Detalle = $"{count} servicio(s) que deberían estar activos no lo están: {nomServ}{(count > 3 ? " ..." : "")}.",
+                ReparacionesSugeridas = [],
+                AccionLabel = "Ver servicios",
+                AccionTarget = "expand:servicios"
             });
         }
 
@@ -101,7 +114,9 @@ public static class DiagnosticEngine
                     Modulo = "Red",
                     Titulo = "Sin conexión a Internet",
                     Detalle = "No se pudo contactar con 8.8.8.8. Puede deberse a un problema de red, DNS o firewall.",
-                    ReparacionesSugeridas = ["rep.dns.flush", "rep.winsock.reset"]
+                    ReparacionesSugeridas = ["rep.dns.flush", "rep.winsock.reset"],
+                    AccionLabel = "Solucionar problemas",
+                    AccionTarget = "ms-settings:network-troubleshoot"
                 });
             }
             if (string.IsNullOrWhiteSpace(diag.Red.DNS))
@@ -112,7 +127,9 @@ public static class DiagnosticEngine
                     Modulo = "Red",
                     Titulo = "DNS no configurado",
                     Detalle = "No se detectaron servidores DNS configurados en ninguna interfaz de red activa.",
-                    ReparacionesSugeridas = ["rep.dns.flush"]
+                    ReparacionesSugeridas = ["rep.dns.flush"],
+                    AccionLabel = "Configuración de red",
+                    AccionTarget = "ms-settings:network-status"
                 });
             }
         }
@@ -128,7 +145,9 @@ public static class DiagnosticEngine
                     Modulo = "Seguridad",
                     Titulo = "Defender desactivado",
                     Detalle = "Microsoft Defender no está activo. El equipo podría estar desprotegido.",
-                    ReparacionesSugeridas = []
+                    ReparacionesSugeridas = [],
+                    AccionLabel = "Abrir Seguridad",
+                    AccionTarget = "windowsdefender:"
                 });
             }
             if (!diag.Seguridad.FirewallActivo)
@@ -139,7 +158,9 @@ public static class DiagnosticEngine
                     Modulo = "Seguridad",
                     Titulo = "Firewall desactivado",
                     Detalle = "El firewall de Windows no está activo en el perfil Domain. Riesgo de seguridad.",
-                    ReparacionesSugeridas = []
+                    ReparacionesSugeridas = [],
+                    AccionLabel = "Abrir firewall",
+                    AccionTarget = "firewall.cpl"
                 });
             }
         }
@@ -147,14 +168,17 @@ public static class DiagnosticEngine
         // Drivers
         if (diag.Drivers?.DispositivosError is { Count: > 0 })
         {
+            var count = diag.Drivers.DispositivosError.Count;
             var nomDrv = string.Join(", ", diag.Drivers.DispositivosError.Take(3).Select(d => d.Nombre));
             problemas.Add(new Problema
             {
                 Gravedad = Gravedad.Medio,
                 Modulo = "Drivers",
                 Titulo = "Dispositivos con errores",
-                Detalle = $"{diag.Drivers.DispositivosError.Count} dispositivo(s) tienen errores de driver: {nomDrv}{(diag.Drivers.DispositivosError.Count > 3 ? " ..." : "")}.",
-                ReparacionesSugeridas = []
+                Detalle = $"{count} dispositivo(s) tienen errores de driver: {nomDrv}{(count > 3 ? " ..." : "")}.",
+                ReparacionesSugeridas = [],
+                AccionLabel = "Administrador de dispositivos",
+                AccionTarget = "devmgmt.msc"
             });
         }
 
@@ -168,7 +192,9 @@ public static class DiagnosticEngine
                 Modulo = "Windows",
                 Titulo = "Errores críticos en el sistema",
                 Detalle = $"Se detectaron {erroresSistema} eventos críticos en el visor de eventos del sistema en las últimas sesiones.",
-                ReparacionesSugeridas = ["rep.sfc"]
+                ReparacionesSugeridas = ["rep.sfc"],
+                AccionLabel = "Abrir Visor de eventos",
+                AccionTarget = "eventvwr.msc"
             });
         }
 

@@ -5,6 +5,7 @@ public class WuResetRepair : CommandRepair
     public override string Id => "rep.wu.reset";
     public override string Titulo => "Reiniciar Windows Update";
     public override string Descripcion => "Detiene servicios de Windows Update, borra caché y reinicia los servicios.";
+    public override bool RequiresElevation => true;
     public override string Comando => @"
 $services = @('wuauserv', 'cryptsvc', 'bits', 'msiserver')
 $services | ForEach-Object { Stop-Service $_ -Force -ErrorAction SilentlyContinue }

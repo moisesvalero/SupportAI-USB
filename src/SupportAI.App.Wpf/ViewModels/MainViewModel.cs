@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using SupportAI.Collectors.Windows;
 using SupportAI.Core.Models;
@@ -17,6 +19,10 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _iaConsent;
     private bool _reparando;
     private CancellationTokenSource? _repairCts;
+    private string? _problemaExpandidoId;
+    private int _scanProgress;
+    private string _faseActual = "";
+    private bool _escaneando;
 
     public MainViewModel()
     {
@@ -26,10 +32,12 @@ public class MainViewModel : INotifyPropertyChanged
         RepairCommand = new RelayCommand(ExecuteRepair);
         CancelRepairCommand = new RelayCommand(_ => CancelRepair());
         DownloadModelCommand = new RelayCommand(_ => DownloadModel());
+        AbrirAccionCommand = new RelayCommand(AbrirAccion);
+        ToggleExpandirCommand = new RelayCommand(ToggleExpandir);
+        IniciarServicioCommand = new AsyncRelayCommand(async param => await IniciarServicio(param));
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
 
-        // Timer para refrescar el estado del modelo en segundo plano
         var timer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(3)
@@ -51,6 +59,107 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand RepairCommand { get; }
     public ICommand CancelRepairCommand { get; }
     public ICommand DownloadModelCommand { get; }
+    public ICommand AbrirAccionCommand { get; }
+    public ICommand ToggleExpandirCommand { get; }
+    public ICommand IniciarServicioCommand { get; }
+
+    public string? ProblemaExpandidoId
+    {
+        get => _problemaExpandidoId;
+        set { _problemaExpandidoId = value; OnPropertyChanged(); OnPropertyChanged(nameof(ProblemaExpandido)); }
+    }
+
+    private void ToggleExpandir(object? param)
+    {
+        if (param is string id)
+            ProblemaExpandidoId = ProblemaExpandidoId == id ? null : id;
+    }
+
+    private async Task IniciarServicio(object? param)
+    {
+        if (param is not string nombreCorto) return;
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = $"-NoProfile -Command \"Start-Service '{nombreCorto}'\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        using var proc = new Process { StartInfo = psi };
+        proc.Start();
+        var err = await proc.StandardError.ReadToEndAsync();
+        await proc.WaitForExitAsync();
+        if (proc.ExitCode == 0)
+        {
+            StatusText = $"✅ Servicio '{nombreCorto}' iniciado correctamente.";
+            var svc = _diagnostico.Windows?.ServiciosFallando.FirstOrDefault(s => s.NombreCorto == nombreCorto);
+            if (svc is not null)
+            {
+                _diagnostico = _diagnostico with
+                {
+                    Windows = _diagnostico.Windows! with
+                    {
+                        ServiciosFallando = _diagnostico.Windows.ServiciosFallando
+                            .Where(s => s.NombreCorto != nombreCorto).ToList()
+                    }
+                };
+                OnPropertyChanged(nameof(ServiciosFallando));
+            }
+        }
+        else
+        {
+            StatusText = $"❌ Error al iniciar '{nombreCorto}': {err.Trim()}";
+        }
+    }
+
+    private void AbrirAccion(object? param)
+    {
+        if (param is not string target) return;
+        try
+        {
+            if (target.StartsWith("expand:"))
+            {
+                ToggleExpandir(target["expand:".Length..]);
+                return;
+            }
+            if (target.StartsWith("ms-settings:"))
+            {
+                Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+                return;
+            }
+            if (target == "shutdown")
+            {
+                var confirm = MessageBox.Show(
+                    "¿Reiniciar el equipo ahora?\nGuarda tu trabajo antes de continuar.",
+                    "Reiniciar equipo", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (confirm == MessageBoxResult.Yes)
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "shutdown.exe",
+                        Arguments = "/r /t 30",
+                        UseShellExecute = true
+                    });
+                return;
+            }
+            if (target == "taskmgr")
+            {
+                Process.Start(new ProcessStartInfo { FileName = "taskmgr.exe", UseShellExecute = true });
+                return;
+            }
+            if (target == "windowsdefender:")
+            {
+                Process.Start(new ProcessStartInfo { FileName = "windowsdefender:", UseShellExecute = true });
+                return;
+            }
+            Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Error al abrir: {ex.Message}";
+        }
+    }
 
     private string _statusText = "";
     public string StatusText
@@ -63,7 +172,7 @@ public class MainViewModel : INotifyPropertyChanged
     public int Puntuacion
     {
         get => _puntuacion;
-        set { _puntuacion = value; OnPropertyChanged(); OnPropertyChanged(nameof(ScoreColor)); }
+        set { _puntuacion = value; OnPropertyChanged(); OnPropertyChanged(nameof(ScoreColor)); OnPropertyChanged(nameof(ScoreLabel)); }
     }
 
     public string ScoreColor => Puntuacion switch
@@ -71,6 +180,14 @@ public class MainViewModel : INotifyPropertyChanged
         >= 80 => "#27ae60",
         >= 50 => "#f39c12",
         _ => "#e74c3c"
+    };
+
+    public string ScoreLabel => Puntuacion switch
+    {
+        >= 80 => "Excelente",
+        >= 60 => "Buena",
+        >= 40 => "Regular",
+        _ => "Crítica"
     };
 
     public string Sistema => _diagnostico.Hardware?.SO?.Caption ?? "";
@@ -86,7 +203,7 @@ public class MainViewModel : INotifyPropertyChanged
         set { _iaConsent = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
     }
 
-    public bool PuedeAnalizarConIa => _iaConsent && TieneDatos && !_iaCargando && !_reparando;
+    public bool PuedeAnalizarConIa => _iaConsent && TieneDatos && !_iaCargando && !_reparando && !_escaneando;
 
     public bool Reparando
     {
@@ -107,8 +224,25 @@ public class MainViewModel : INotifyPropertyChanged
     public List<IRepairAction> Repairs => RepairCatalog.All.ToList();
     public bool HayProblemas => Problemas.Count > 0;
     public bool TieneDatos => Puntuacion > 0;
+    public List<ServicioInfo> ServiciosFallando => _diagnostico.Windows?.ServiciosFallando ?? [];
+    public bool ProblemaExpandido => _problemaExpandidoId is not null;
 
-    // IA state
+    public bool Escaneando
+    {
+        get => _escaneando;
+        set { _escaneando = value; OnPropertyChanged(); OnPropertyChanged(nameof(Escaneando)); }
+    }
+    public int ScanProgress
+    {
+        get => _scanProgress;
+        set { _scanProgress = value; OnPropertyChanged(); }
+    }
+    public string FaseActual
+    {
+        get => _faseActual;
+        set { _faseActual = value; OnPropertyChanged(); }
+    }
+
     private string _iaExplicacion = "";
     public string IaExplicacion
     {
@@ -152,7 +286,7 @@ public class MainViewModel : INotifyPropertyChanged
         RefreshModelStatus();
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            Process.Start(new ProcessStartInfo
             {
                 FileName = ModelDownloader.LlamaCppUrl,
                 UseShellExecute = true
@@ -168,22 +302,55 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task ScanAsync()
     {
-        StatusText = "Escaneando...";
+        Escaneando = true;
+        ScanProgress = 0;
         Puntuacion = 0;
         IaExplicacion = "";
         IaProvider = "";
         IaRecomendaciones = [];
+        _problemaExpandidoId = null;
+        OnPropertyChanged(nameof(ProblemaExpandidoId));
 
-        _diagnostico = await _engine.CollectAllAsync(CancellationToken.None);
-        var (problemas, puntuacion) = DiagnosticEngine.Analyze(_diagnostico);
-        _diagnostico = _diagnostico with { Problemas = problemas, Puntuacion = puntuacion };
+        // Timer anima progreso mientras PowerShell trabaja
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        var steps = new[] { ("Recopilando hardware...", 15), ("Analizando sistema...", 35), ("Revisando eventos...", 55), ("Verificando red y seguridad...", 70), ("Procesando resultados...", 85) };
+        int stepIdx = 0;
+        timer.Tick += (_, _) =>
+        {
+            if (stepIdx < steps.Length && ScanProgress >= steps[stepIdx].Item2)
+            {
+                FaseActual = steps[stepIdx].Item1;
+                stepIdx++;
+            }
+            if (ScanProgress < 85) ScanProgress += 2;
+        };
+        timer.Start();
 
-        Puntuacion = puntuacion;
-        Problemas = problemas;
-        Modulos = BuildModulos(_diagnostico);
+        try
+        {
+            StatusText = "Iniciando diagnóstico...";
+            FaseActual = "Recopilando hardware...";
 
-        RefreshBindings();
-        StatusText = $"Diagnóstico completado. Puntuación: {Puntuacion}/100. {Problemas.Count} problema(s).";
+            _diagnostico = await _engine.CollectAllAsync(CancellationToken.None);
+            ScanProgress = 90;
+            FaseActual = "Analizando resultados...";
+
+            var (problemas, puntuacion) = DiagnosticEngine.Analyze(_diagnostico);
+            _diagnostico = _diagnostico with { Problemas = problemas, Puntuacion = puntuacion };
+
+            Puntuacion = puntuacion;
+            Problemas = problemas;
+            Modulos = BuildModulos(_diagnostico);
+
+            RefreshBindings();
+            ScanProgress = 100;
+            StatusText = $"Diagnóstico completado. Puntuación: {Puntuacion}/100 ({ScoreLabel}). {Problemas.Count} problema(s).";
+        }
+        finally
+        {
+            timer.Stop();
+            Escaneando = false;
+        }
     }
 
     private async Task AnalyzeWithIaAsync()
@@ -232,6 +399,14 @@ public class MainViewModel : INotifyPropertyChanged
 
         var repair = RepairCatalog.Get(id);
         if (repair is null) return;
+
+        if (repair.RequiresElevation)
+        {
+            var prompt = $"Esta reparación requiere permisos de administrador:\n\n{repair.Titulo}\n{repair.Descripcion}\n\nSe mostrará el diálogo de UAC de Windows para continuar.\n\n¿Continuar?";
+            var confirm = MessageBox.Show(prompt, "Permisos elevados requeridos",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes) return;
+        }
 
         Reparando = true;
         StatusText = $"Ejecutando: {repair.Titulo}...";
@@ -316,6 +491,7 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HayProblemas));
         OnPropertyChanged(nameof(TieneDatos));
         OnPropertyChanged(nameof(PuedeAnalizarConIa));
+        OnPropertyChanged(nameof(ServiciosFallando));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

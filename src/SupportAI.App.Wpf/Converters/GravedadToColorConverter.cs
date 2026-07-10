@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using SupportAI.Core.Models;
+using SupportAI.Repairs;
 
 namespace SupportAI.App.Wpf.Converters;
 
@@ -79,6 +80,36 @@ public class ScoreToColorConverter : IValueConverter
                 _ => new SolidColorBrush(Color.FromRgb(231, 76, 60))
             }
             : new SolidColorBrush(Colors.Gray);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
+public class NullToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string s)
+            return string.IsNullOrEmpty(s) ? Visibility.Collapsed : Visibility.Visible;
+        return value is not null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
+public class RepairLabelConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string id)
+        {
+            var repair = RepairCatalog.Get(id);
+            if (repair is not null)
+                return repair.Titulo;
+        }
+        return value ?? "";
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

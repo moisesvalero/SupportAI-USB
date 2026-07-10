@@ -6,6 +6,8 @@ public class TempCleanRepair : CommandRepair
     public override string Titulo => "Limpiar archivos temporales";
     public override string Descripcion => "Elimina archivos temporales de %TEMP% y C:\\Windows\\Temp.";
 
+        public override bool RequiresElevation => true;
+
     public override string Comando => @"
 $folders = @(
     [System.IO.Path]::GetTempPath(),
