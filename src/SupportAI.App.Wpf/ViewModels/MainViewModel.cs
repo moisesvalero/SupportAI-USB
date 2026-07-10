@@ -110,7 +110,12 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            StatusText = $"❌ Error al iniciar '{nombreCorto}': {err.Trim()}";
+            var msg = err.Trim();
+            if (msg.Contains("no puede encontrar el archivo", StringComparison.OrdinalIgnoreCase))
+                msg = "El ejecutable del servicio no existe (aplicación desinstalada).";
+            else if (msg.Contains("acceso denegado", StringComparison.OrdinalIgnoreCase))
+                msg = "Permiso denegado. Ejecuta SupportAI como administrador.";
+            StatusText = $"❌ '{nombreCorto}': {msg}";
         }
     }
 
@@ -224,7 +229,9 @@ public class MainViewModel : INotifyPropertyChanged
     public List<IRepairAction> Repairs => RepairCatalog.All.ToList();
     public bool HayProblemas => Problemas.Count > 0;
     public bool TieneDatos => Puntuacion > 0;
-    public List<ServicioInfo> ServiciosFallando => _diagnostico.Windows?.ServiciosFallando ?? [];
+    public List<ServicioInfo> ServiciosFallando => (_diagnostico.Windows?.ServiciosFallando ?? [])
+        .Where(s => !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s))
+        .ToList();
     public bool ProblemaExpandido => _problemaExpandidoId is not null;
 
     public bool Escaneando
@@ -492,6 +499,41 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(TieneDatos));
         OnPropertyChanged(nameof(PuedeAnalizarConIa));
         OnPropertyChanged(nameof(ServiciosFallando));
+    }
+
+    private static bool ServiceExecutableExists(ServicioInfo svc)
+    {
+        var path = svc.PathName;
+        if (string.IsNullOrWhiteSpace(path)) return false;
+
+        path = path.Trim();
+        // Extraer ejecutable: "C:\path\to\exe.exe" args → C:\path\to\exe.exe
+        if (path.StartsWith('"'))
+        {
+            var end = path.IndexOf('"', 1);
+            if (end > 0) path = path[1..end];
+        }
+        else
+        {
+            var space = path.IndexOf(' ');
+            if (space > 0) path = path[..space];
+        }
+
+        // Expandir variables de entorno
+        path = Environment.ExpandEnvironmentVariables(path);
+
+        // Rutas relativas a SystemRoot: \SystemRoot\System32\... → C:\Windows\System32\...
+        if (path.StartsWith(@"\SystemRoot\", StringComparison.OrdinalIgnoreCase))
+        {
+            var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            path = winDir + path[@"\SystemRoot".Length..];
+        }
+
+        // Rutas absolutas sin letra: \??\C:\... → C:\...
+        if (path.StartsWith(@"\??\", StringComparison.OrdinalIgnoreCase))
+            path = path[4..];
+
+        return File.Exists(path);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

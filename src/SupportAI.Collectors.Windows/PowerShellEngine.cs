@@ -65,7 +65,7 @@ $r = [PSCustomObject]@{
     windows = [PSCustomObject]@{
         updatePendiente = $updatePendiente
         archivosCorruptos = $archivosCorruptos
-        serviciosFallando = @(Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}})
+        serviciosFallando = @(Get-CimInstance Win32_Service | Where-Object { $_.State -ne 'Running' -and $_.StartMode -eq 'Auto' } | Select-Object @{N='nombre';E={$_.DisplayName}}, @{N='nombreCorto';E={$_.Name}}, @{N='estado';E={$_.State}}, @{N='tipoInicio';E={$_.StartMode}}, @{N='pathName';E={$_.PathName}})
         eventosCriticos = @(Get-WinEvent -FilterHashtable @{LogName='System';Level=1,2} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{N='id';E={$_.Id}}, @{N='nivel';E={$_.Level}}, @{N='fuente';E={$_.ProviderName}}, @{N='mensaje';E={$_.Message}}, @{N='timestamp';E={if($_.TimeCreated){$_.TimeCreated.ToString('o')}}})
     }
     red = [PSCustomObject]@{
@@ -207,7 +207,8 @@ $r | ConvertTo-Json -Depth 5
                     ServiciosFallando = raw.Windows.ServiciosFallando?.Select(s => new ServicioInfo
                     {
                         Nombre = s.Nombre ?? "", NombreCorto = s.NombreCorto ?? "",
-                        Estado = s.Estado ?? "", TipoInicio = s.TipoInicio ?? ""
+                        Estado = s.Estado ?? "", TipoInicio = s.TipoInicio ?? "",
+                        PathName = s.PathName
                     }).ToList() ?? [],
                     EventosCriticos = raw.Windows.EventosCriticos?.Select(e => new EventoInfo
                     {
@@ -322,7 +323,7 @@ $r | ConvertTo-Json -Depth 5
         public List<EventoRaw>? EventosCriticos { get; set; }
     }
 
-    private class ServicioRaw { public string? Nombre { get; set; } public string? NombreCorto { get; set; } public string? Estado { get; set; } public string? TipoInicio { get; set; } }
+    private class ServicioRaw { public string? Nombre { get; set; } public string? NombreCorto { get; set; } public string? Estado { get; set; } public string? TipoInicio { get; set; } public string? PathName { get; set; } }
     private class EventoRaw { public int Id { get; set; } public int Nivel { get; set; } public string? Fuente { get; set; } public string? Mensaje { get; set; } public DateTime? Timestamp { get; set; } }
 
     private class RedRaw

@@ -16,6 +16,7 @@ public record ServicioInfo
     [JsonPropertyName("nombreCorto")] public string NombreCorto { get; init; } = "";
     [JsonPropertyName("estado")] public string Estado { get; init; } = "";
     [JsonPropertyName("tipoInicio")] public string TipoInicio { get; init; } = "";
+    [JsonPropertyName("pathName")] public string? PathName { get; init; }
 }
 
 public record EventoInfo
