@@ -79,44 +79,56 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task IniciarServicio(object? param)
     {
         if (param is not string nombreCorto) return;
+
+        var confirm = MessageBox.Show(
+            $"Iniciar el servicio '{nombreCorto}' requiere permisos de administrador.\n\nSe abrirá el diálogo de UAC de Windows.\n¿Continuar?",
+            "Permisos elevados requeridos",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-NoProfile -Command \"Start-Service '{nombreCorto}'\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"Start-Service '{nombreCorto}'\"",
+            UseShellExecute = true,
+            Verb = "runas",
+            CreateNoWindow = false
         };
-        using var proc = new Process { StartInfo = psi };
-        proc.Start();
-        var err = await proc.StandardError.ReadToEndAsync();
-        await proc.WaitForExitAsync();
-        if (proc.ExitCode == 0)
+        try
         {
-            StatusText = $"✅ Servicio '{nombreCorto}' iniciado correctamente.";
-            var svc = _diagnostico.Windows?.ServiciosFallando.FirstOrDefault(s => s.NombreCorto == nombreCorto);
-            if (svc is not null)
+            using var proc = new Process { StartInfo = psi };
+            proc.Start();
+            await proc.WaitForExitAsync();
+
+            if (proc.ExitCode == 0)
             {
-                _diagnostico = _diagnostico with
+                StatusText = $"✅ Servicio '{nombreCorto}' iniciado correctamente.";
+                var svc = _diagnostico.Windows?.ServiciosFallando.FirstOrDefault(s => s.NombreCorto == nombreCorto);
+                if (svc is not null)
                 {
-                    Windows = _diagnostico.Windows! with
+                    _diagnostico = _diagnostico with
                     {
-                        ServiciosFallando = _diagnostico.Windows.ServiciosFallando
-                            .Where(s => s.NombreCorto != nombreCorto).ToList()
-                    }
-                };
-                OnPropertyChanged(nameof(ServiciosFallando));
+                        Windows = _diagnostico.Windows! with
+                        {
+                            ServiciosFallando = _diagnostico.Windows.ServiciosFallando
+                                .Where(s => s.NombreCorto != nombreCorto).ToList()
+                        }
+                    };
+                    OnPropertyChanged(nameof(ServiciosFallando));
+                }
+            }
+            else
+            {
+                StatusText = $"❌ '{nombreCorto}': no se pudo iniciar (código {proc.ExitCode}). Prueba a ejecutar SupportAI como administrador.";
             }
         }
-        else
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            var msg = err.Trim();
-            if (msg.Contains("no puede encontrar el archivo", StringComparison.OrdinalIgnoreCase))
-                msg = "El ejecutable del servicio no existe (aplicación desinstalada).";
-            else if (msg.Contains("acceso denegado", StringComparison.OrdinalIgnoreCase))
-                msg = "Permiso denegado. Ejecuta SupportAI como administrador.";
-            StatusText = $"❌ '{nombreCorto}': {msg}";
+            StatusText = $"⏹️ Inicio de '{nombreCorto}' cancelado por el usuario.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ '{nombreCorto}': {ex.Message}";
         }
     }
 
