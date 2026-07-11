@@ -298,7 +298,8 @@ $r | ConvertTo-Json -Depth 5
                     {
                         Nombre = s.Nombre ?? "", NombreCorto = s.NombreCorto ?? "",
                         Estado = s.Estado ?? "", TipoInicio = s.TipoInicio ?? "",
-                        PathName = s.PathName
+                        PathName = s.PathName,
+                        EsCritico = !EsServicioRuido(s.NombreCorto ?? "")
                     }).ToList() ?? [],
                     EventosCriticos = raw.Windows.EventosCriticos?.Select(e => new EventoInfo
                     {
@@ -449,4 +450,26 @@ $r | ConvertTo-Json -Depth 5
         public List<DispositivoRaw>? DispositivosError { get; set; }
     }
     private class DispositivoRaw { public string? Nombre { get; set; } public int CodigoError { get; set; } public string? Descripcion { get; set; } }
+
+    private static readonly string[] ServiciosRuido = [
+        "diagtrack", "dmwappushservice", "wmpnetworksvc", "retaildemo",
+        "mapsbroker", "lfsvc", "xblauthmanager", "xblgamesave",
+        "xboxnetapisvc", "wbiosrvc", "wcncsvc", "bthserv",
+        "bthavctpsvc", "bthhfsrv", "messagingservice", "pcasvc",
+        "wpsservice", "wpnservice", "stisvc", "wisvc",
+        "wersvc", "wercplsupport", "dosvc", "ssdpsrv",
+        "fdrespub", "upnphost", "sharedaccess", "rasauto",
+        "rasman", "sessionenv", "termservice", "umrdpservice",
+        "appidsvc", "appmgmt", "cscservice", "fontcache",
+        "themes", "efs", "homegroupprovider",
+        "bluetoothuserservice", "ndu", "shpamsvc",
+        "tzautoupdate", "wlidsvc", "wlanautoconfig"
+    ];
+
+    private static bool EsServicioRuido(string nombreCorto)
+    {
+        if (string.IsNullOrWhiteSpace(nombreCorto)) return true;
+        return ServiciosRuido.Any(r =>
+            nombreCorto.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+    }
 }

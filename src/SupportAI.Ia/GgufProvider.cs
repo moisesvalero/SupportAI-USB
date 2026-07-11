@@ -19,6 +19,61 @@ public class GgufProvider : ILlmProvider
     private string LlamaCliPath => Path.Combine(_modelsDir, "llama-cli.exe");
     private string? FindModel() => Directory.GetFiles(_modelsDir, "*.gguf").FirstOrDefault();
 
+    public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
+    {
+        var modelPath = FindModel();
+        if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(LlamaCliPath))
+            return "Modelo GGUF no encontrado. Descarga el modelo desde el panel o añade una API key en ⚙️.";
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<s>");
+        foreach (var (role, text) in messages)
+        {
+            if (role == "system")
+                sb.Append("[INST] ").Append(text).Append(" [/INST]");
+            else if (role == "user")
+                sb.Append("[INST] ").Append(text).Append(" [/INST]");
+            else if (role == "assistant")
+                sb.Append(text).Append(" ");
+        }
+        var prompt = sb.ToString().TrimEnd();
+
+        var tempFile = Path.Combine(Path.GetTempPath(), $"llama_chat_{Guid.NewGuid()}.txt");
+
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, prompt, ct);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = LlamaCliPath,
+                Arguments = $"-m \"{modelPath}\" -f \"{tempFile}\" -n 800 --temp 0.3 --no-display-prompt",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = psi };
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+
+            output = output.Trim();
+            if (string.IsNullOrWhiteSpace(output))
+                return "No se pudo obtener respuesta del modelo local.";
+
+            return output;
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
+        }
+    }
+
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var modelPath = FindModel();

@@ -334,6 +334,7 @@
                                     FontSize="12" Padding="12,6" Background="#6c5ce7" Foreground="White"
                                     BorderThickness="0" Cursor="Hand"
                                     IsEnabled="{Binding PuedeAnalizarConIa}"
+                                    ToolTip="Inicia el análisis con IA y abre el chat interactivo"
                                     HorizontalAlignment="Center" Width="160"/>
                             <TextBlock Text="{Binding IaProvider, StringFormat='Proveedor: {0}', TargetNullValue='Reglas offline'}" 
                                        FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"
@@ -477,26 +478,14 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- IA Results -->
-                    <Border Style="{StaticResource Card}"
-                            Visibility="{Binding TieneIaResultado, Converter={StaticResource BoolVis}}">
-                        <StackPanel>
-                            <TextBlock Text="🧠 Análisis IA" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
-                            <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding IaExplicacion}" FontSize="12" Foreground="#4a5568"
-                                       TextWrapping="Wrap" Margin="0,0,0,8" LineHeight="20"/>
-                            <TextBlock Text="{Binding IaProvider, StringFormat='— {0}'}" FontSize="10"
-                                       Foreground="#95a5a6" FontStyle="Italic" HorizontalAlignment="Right"/>
-                        </StackPanel>
-                    </Border>
-
                     <!-- Chat IA -->
-                    <Border Style="{StaticResource Card}">
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding ChatHabilitado, Converter={StaticResource BoolVis}}">
                         <StackPanel>
-                            <TextBlock Text="🧠 Chat IA" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
+                            <TextBlock Text="🧠 Asistente IA" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,6"/>
                             <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
 
-                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
+                            <ScrollViewer x:Name="ChatScrollViewer" MaxHeight="300" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
                                 <ItemsControl ItemsSource="{Binding ChatMessages}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -514,12 +503,16 @@
                                                     </Style>
                                                 </Border.Style>
                                                 <TextBlock Text="{Binding Text}" FontSize="12" Foreground="#2c3e50"
-                                                           TextWrapping="Wrap" MaxWidth="400"/>
+                                                           TextWrapping="Wrap" MaxWidth="450"/>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
+
+                            <TextBlock Text="● IA pensando..." FontSize="11" Foreground="#6c5ce7" FontStyle="Italic"
+                                       Margin="0,0,0,4"
+                                       Visibility="{Binding ChatCargando, Converter={StaticResource BoolVis}}"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -534,7 +527,7 @@
                                         BorderThickness="0" Cursor="Hand"
                                         IsEnabled="{Binding ChatCargando, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
                             </Grid>
-                            <TextBlock Text="Escribe tu pregunta sobre el diagnóstico..." FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
+                            <TextBlock Text="Pregunta sobre el diagnóstico o pide ayuda para reparar..." FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using SupportAI.App.Wpf.ViewModels;
@@ -14,7 +15,28 @@ public partial class MainWindow : Window
         InitializeComponent();
         _vm = new MainViewModel();
         DataContext = _vm;
+        _vm.PropertyChanged += OnVmPropertyChanged;
         Loaded += async (_, _) => await _vm.ScanAsync();
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.ChatHabilitado) && _vm.ChatHabilitado)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                ChatInputBox.Focus();
+                Keyboard.Focus(ChatInputBox);
+                ChatScrollViewer?.ScrollToBottom();
+            });
+        }
+        else if (e.PropertyName == nameof(MainViewModel.ChatMessages))
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                ChatScrollViewer?.ScrollToBottom();
+            });
+        }
     }
 
     private void VerComandos_Click(object sender, RoutedEventArgs e)

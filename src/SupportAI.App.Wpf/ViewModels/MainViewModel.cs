@@ -29,7 +29,8 @@ public class MainViewModel : INotifyPropertyChanged
     private string _descargaFase = "";
     private string _chatInput = "";
     private bool _chatCargando;
-    private readonly List<ChatMessage> _chatHistory = [];
+    private bool _chatInicializado;
+    private string? _promptSistema;
 
     public MainViewModel()
     {
@@ -264,20 +265,14 @@ public class MainViewModel : INotifyPropertyChanged
     public bool HayProblemas => Problemas.Count > 0;
     public bool TieneDatos => Puntuacion > 0;
     public List<ServicioInfo> ServiciosFallando => (_diagnostico.Windows?.ServiciosFallando ?? [])
-        .Where(s => !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s) && !EsUpdaterConocido(s))
+        .Where(s => s.EsCritico && !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s))
         .ToList();
-
-    private static readonly string[] UpdaterPrefixes = ["edgeupdate", "edgeupdatem", "googleupdate", "googleupdater", "braveupdate", "brave", "firefoxupdate", "mozillamaintenance", "adobeupdate", "adobearm"];
-
-    private static bool EsUpdaterConocido(ServicioInfo s) =>
-        !string.IsNullOrWhiteSpace(s.NombreCorto) &&
-        UpdaterPrefixes.Any(p => s.NombreCorto.StartsWith(p, StringComparison.OrdinalIgnoreCase));
     public bool ProblemaExpandido => _problemaExpandidoId is not null;
 
     public bool Escaneando
     {
         get => _escaneando;
-        set { _escaneando = value; OnPropertyChanged(); OnPropertyChanged(nameof(Escaneando)); }
+        set { _escaneando = value; OnPropertyChanged(); OnPropertyChanged(nameof(Escaneando)); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
     }
     public int ScanProgress
     {
@@ -307,34 +302,21 @@ public class MainViewModel : INotifyPropertyChanged
     }
     public bool PuedeDescargar => !_descargando;
 
-    private string _iaExplicacion = "";
-    public string IaExplicacion
-    {
-        get => _iaExplicacion;
-        set { _iaExplicacion = value; OnPropertyChanged(); OnPropertyChanged(nameof(TieneIaResultado)); }
-    }
-
-    private string _iaProvider = "";
     public string IaProvider
     {
         get => _iaProvider;
         set { _iaProvider = value; OnPropertyChanged(); }
     }
+    private string _iaProvider = "";
 
-    private List<LlmRecomendacion> _iaRecomendaciones = [];
-    public List<LlmRecomendacion> IaRecomendaciones
-    {
-        get => _iaRecomendaciones;
-        set { _iaRecomendaciones = value; OnPropertyChanged(); OnPropertyChanged(nameof(TieneIaResultado)); }
-    }
-
-    public bool TieneIaResultado => !string.IsNullOrWhiteSpace(IaExplicacion);
     private bool _iaCargando;
     public bool IaCargando
     {
         get => _iaCargando;
         set { _iaCargando = value; OnPropertyChanged(); OnPropertyChanged(nameof(PuedeAnalizarConIa)); }
     }
+
+    public bool ChatHabilitado => _chatInicializado;
 
     private string _modelStatus = "";
     public string ModelStatus
@@ -400,9 +382,12 @@ public class MainViewModel : INotifyPropertyChanged
         Escaneando = true;
         ScanProgress = 0;
         Puntuacion = 0;
-        IaExplicacion = "";
         IaProvider = "";
-        IaRecomendaciones = [];
+        _chatInicializado = false;
+        _promptSistema = null;
+        ChatMessages.Clear();
+        OnPropertyChanged(nameof(ChatMessages));
+        OnPropertyChanged(nameof(ChatHabilitado));
         _problemaExpandidoId = null;
         OnPropertyChanged(nameof(ProblemaExpandidoId));
 
@@ -437,7 +422,6 @@ public class MainViewModel : INotifyPropertyChanged
             Problemas = problemas;
             Modulos = BuildModulos(_diagnostico);
 
-            RefreshBindings();
             ScanProgress = 100;
             StatusText = $"Diagnóstico completado. Puntuación: {Puntuacion}/100 ({ScoreLabel}). {Problemas.Count} problema(s).";
         }
@@ -445,16 +429,20 @@ public class MainViewModel : INotifyPropertyChanged
         {
             timer.Stop();
             Escaneando = false;
+            RefreshBindings();
         }
     }
 
     private async Task AnalyzeWithIaAsync()
     {
-        if (!TieneDatos) return;
+        if (!TieneDatos || _chatInicializado) return;
         IaCargando = true;
-        IaExplicacion = "";
         IaProvider = "";
-        IaRecomendaciones = [];
+        ChatMessages.Clear();
+        _chatInicializado = false;
+        _promptSistema = null;
+        OnPropertyChanged(nameof(ChatMessages));
+        OnPropertyChanged(nameof(ChatHabilitado));
         StatusText = "Analizando con IA...";
 
         try
@@ -464,16 +452,22 @@ public class MainViewModel : INotifyPropertyChanged
                 geminiKey: GetKeyFromFile("GEMINI_KEY"));
 
             var result = await _llm.AnalyzeAsync(_diagnostico);
-            IaExplicacion = result.Explicacion;
             IaProvider = result.ProveedorUsado;
-            IaRecomendaciones = result.Recomendaciones;
-            StatusText = $"Análisis IA completado ({result.ProveedorUsado}).";
+            _chatInicializado = true;
+            OnPropertyChanged(nameof(ChatHabilitado));
+
+            var esReglas = result.ProveedorUsado == "Reglas locales";
+            ChatMessages.Add(new ChatMessage("assistant", esReglas
+                ? "⚠️ **Sin conexión IA.** No hay API key configurada ni modelo local.\n\nVe a ⚙️ (ajustes) para añadir una key de OpenRouter o Gemini, o descarga el modelo GGUF desde el panel lateral.\n\nMientras tanto, este es el análisis con reglas locales:\n\n" + result.Explicacion
+                : result.Explicacion));
+            OnPropertyChanged(nameof(ChatMessages));
+            StatusText = $"Análisis completado ({result.ProveedorUsado}). Haz tu primera pregunta.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Error en análisis IA: {ex.Message}";
-            IaExplicacion = "No se pudo completar el análisis con IA. Verifica tu conexión y clave API.";
-            IaProvider = "Error";
+            ChatMessages.Add(new ChatMessage("assistant", $"❌ Error al analizar con IA: {ex.Message}\n\nVerifica tu conexión y las API keys en ⚙️."));
+            OnPropertyChanged(nameof(ChatMessages));
+            StatusText = "Error en análisis IA.";
         }
         finally
         {
@@ -604,6 +598,7 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(TieneDatos));
         OnPropertyChanged(nameof(PuedeAnalizarConIa));
         OnPropertyChanged(nameof(ServiciosFallando));
+        OnPropertyChanged(nameof(ChatHabilitado));
     }
 
     private static bool ServiceExecutableExists(ServicioInfo svc)
@@ -645,7 +640,7 @@ public class MainViewModel : INotifyPropertyChanged
     public string ChatInput
     {
         get => _chatInput;
-        set { _chatInput = value; OnPropertyChanged(); }
+        set { _chatInput = value; OnPropertyChanged(); CommandManager.InvalidateRequerySuggested(); }
     }
     public bool ChatCargando
     {
@@ -671,27 +666,15 @@ public class MainViewModel : INotifyPropertyChanged
                 openRouterKey: GetKeyFromFile("OPENROUTER_KEY"),
                 geminiKey: GetKeyFromFile("GEMINI_KEY"));
 
-            var diagJson = System.Text.Json.JsonSerializer.Serialize(_diagnostico, new System.Text.Json.JsonSerializerOptions
+            if (!_chatInicializado)
             {
-                WriteIndented = false,
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-            });
+                _chatInicializado = true;
+                OnPropertyChanged(nameof(ChatHabilitado));
+            }
 
-            var systemPrompt = $"""
-            Eres un técnico experto en diagnóstico de Windows. El usuario es un técnico de soporte.
-            Responde de forma concisa y práctica en español. Máximo 5 líneas por respuesta.
-            Da pasos concretos, no teorías.
-
-            Datos del diagnóstico del equipo:
-            {diagJson}
-            """;
-
-            _chatHistory.Add(new ChatMessage("system", systemPrompt));
-            _chatHistory.Add(new ChatMessage("user", pregunta));
-
-            var response = await _llm.ChatAsync(_chatHistory.Select(c => (c.Role, c.Text)).ToList());
+            var messages = ConstruirMensajesParaLlm(pregunta);
+            var response = await _llm.ChatAsync(messages);
             ChatMessages.Add(new ChatMessage("assistant", response));
-            _chatHistory.Add(new ChatMessage("assistant", response));
             OnPropertyChanged(nameof(ChatMessages));
             StatusText = "Respuesta IA recibida.";
         }
@@ -706,6 +689,39 @@ public class MainViewModel : INotifyPropertyChanged
             ChatCargando = false;
             OnPropertyChanged(nameof(ChatCargando));
         }
+    }
+
+    private List<(string Role, string Text)> ConstruirMensajesParaLlm(string pregunta)
+    {
+        _promptSistema ??= BuildSystemPrompt();
+        var msgs = new List<(string Role, string Text)>();
+        msgs.Add(new("system", _promptSistema));
+        foreach (var m in ChatMessages)
+        {
+            if (m.Role == "assistant" || m.Role == "user")
+                msgs.Add(new(m.Role, m.Text));
+        }
+        msgs.Add(new("user", pregunta));
+        return msgs;
+    }
+
+    private string BuildSystemPrompt()
+    {
+        var diagJson = System.Text.Json.JsonSerializer.Serialize(_diagnostico, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+
+        return $"""
+Eres un técnico especialista en diagnóstico de Windows y hardware 
+(CPU, RAM, discos, drivers, BIOS, temperaturas, eventos del sistema, 
+red, servicios). El usuario es un técnico de soporte. 
+Responde en español, conciso y práctico. Pasos concretos, no teoría.
+
+Datos del diagnóstico del equipo:
+{diagJson}
+""";
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

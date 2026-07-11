@@ -62,6 +62,7 @@ public class LlmService
 
     public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
     {
+        var errores = new List<string>();
         foreach (var provider in _providers)
         {
             if (!provider.Disponible) continue;
@@ -72,11 +73,14 @@ public class LlmService
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                errores.Add($"{provider.Name}: {ex.Message}");
                 System.Diagnostics.Trace.WriteLine($"[LlmService] Chat error con {provider.Name}: {ex.Message}");
             }
         }
 
-        // Fallback a reglas: dar una respuesta genérica
-        return "Sin conexión IA online. Configura tus API keys en ⚙️ para activar el chat con IA. Mientras tanto, usa el botón 'Analizar con IA' para el análisis local.";
+        if (errores.Count > 0)
+            return $"⚠️ Error en todos los proveedores IA:\n\n{string.Join("\n", errores)}\n\nRevisa tus API keys en ⚙️ o descarga el modelo GGUF desde el panel lateral.";
+
+        return "⚠️ No hay proveedor IA disponible. Ve a ⚙️ para añadir una API key de OpenRouter/Gemini o descarga el modelo local (350 MB) desde el panel lateral.";
     }
 }

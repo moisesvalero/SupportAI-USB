@@ -24,11 +24,8 @@ SupportAI USB is a **portable Windows diagnostic and automated repair assistant*
 
 * **⚡ Ultra-fast Telemetry:** Instantly reads CPU, RAM, GPU, storage health, logical drives, active network interfaces, and critical Windows event logs.
 * **🎨 Modern WPF UI:** Professional interface with severity-coded problem cards, inline action buttons (open Event Viewer, Disk Cleanup, Device Manager, etc.), and animated progress bar during scans.
-* **🔧 Service Management:** Detects failing services, filters out uninstalled apps, and allows one-click service start with automatic UAC elevation.
-* **🧠 Hybrid AI Engine:** 
-  * **Online (Primary):** OpenRouter (API key) with automatic failover to Google Gemini.
-  * **Local Offline:** Llama.cpp GGUF local model execution.
-  * **Fallback Rules:** Offline static rules engine to guarantee operation under any conditions.
+* **🔧 Service Management:** Detects failing services, filters out noise (telemetry, Xbox, Bluetooth, etc.) via `EsCritico` flag, and allows one-click service start with UAC elevation.
+* **🧠 Interactive AI Assistant:** Click "Analizar con IA" to start a persistent chat with a Windows + hardware specialist LLM. Supports OpenRouter, Google Gemini, local GGUF models, and offline rules with clear fallback messages.
 * **🛡️ Built-in Privacy Filter:** Automatically redacts usernames, machine names, domains, serial numbers, IP/DNS addresses, and profile paths before sending data to AI endpoints.
 * **🧰 One-Click Repairs:** Instantly trigger PowerShell/CMD automation scripts for common system, network, and registry issues. Repairs requiring admin rights show a confirmation dialog and UAC prompt.
 * **📄 PDF Reports:** Generate professional diagnostic PDFs via Save File dialog.
@@ -111,11 +108,8 @@ SupportAI USB es un **asistente portátil de diagnóstico y reparación automát
 
 * **⚡ Telemetría ultrarrápida:** Lee instantáneamente CPU, RAM, GPU, estado del almacenamiento, unidades lógicas, interfaces de red activas y registros de eventos críticos de Windows.
 * **🎨 UI WPF moderna:** Interfaz profesional con tarjetas de problemas codificadas por severidad, botones de acción en línea (Visor de eventos, Liberador de espacio, Administrador de dispositivos, etc.) y barra de progreso animada durante el análisis.
-* **🔧 Gestión de servicios:** Detecta servicios que no arrancan, filtra los de apps desinstaladas y permite iniciarlos con un clic + elevación automática UAC.
-* **🧠 Motor de IA híbrido:**
-  * **Online (Principal):** OpenRouter (API key) con conmutación por error automática a Google Gemini.
-  * **Local Offline:** Ejecución del modelo local GGUF de Llama.cpp.
-  * **Reglas de respaldo:** Motor de reglas estáticas offline para garantizar el funcionamiento bajo cualquier condición.
+* **🔧 Gestión de servicios:** Detecta servicios que no arrancan, filtra ruido (telemetría, Xbox, Bluetooth, etc.) mediante flag `EsCritico`, y permite iniciarlos con un clic + elevación UAC.
+* **🧠 Asistente IA interactivo:** Pulsa "Analizar con IA" para iniciar un chat persistente con un LLM especialista en Windows + hardware. Soporta OpenRouter, Google Gemini, modelo local GGUF y reglas offline con mensajes de error claros.
 * **🛡️ Filtro de privacidad integrado:** Redacta automáticamente nombres de usuario, nombres de equipo, dominios, números de serie, direcciones IP/DNS y rutas de perfiles antes de enviar datos a la IA.
 * **🧰 Reparaciones en un clic:** Ejecuta al instante scripts de automatización de PowerShell/CMD. Las reparaciones que requieren admin muestran confirmación y UAC.
 * **📄 Informes PDF:** Genera informes PDF profesionales con diálogo Guardar como.
@@ -201,4 +195,30 @@ src/
 └── SupportAI.App.Wpf/              # Desktop WPF User Interface
 tests/
 └── SupportAI.Core.Tests/           # Comprehensive Unit Tests (xUnit)
+```
+
+---
+
+## 📋 Changelog
+
+### v1.2.0 (2026-07-11)
+- Interactive AI chat — unified "Analizar con IA" + chat panel with persistent LLM conversation
+- Smart service filtering via `EsCritico` flag (33 noise services filtered automatically)
+- Fixed "Analizar con IA" button staying disabled after scan
+- Fixed chat system prompt duplication on every message
+- Implemented GGUF local model chat support
+- Clear error propagation: users see exact API error messages instead of generic fallback
+- Auto-focus + scroll in chat panel
+- Added 28 unit tests (xUnit)
+
+### v1.1.0
+- CPU temperature, SMART disk health, battery status, power plan, pagefile, throttling detection
+- AI chat interface (prototype)
+- Settings UI for API key configuration
+- OpenRouter + Gemini API integration with key validation
+- GGUF model auto-download with progress bar
+- Offline rule-based diagnosis engine
+
+### v1.0.0
+- Initial release: CLI + WPF UI, core diagnostics, 9 repairs, PDF reports, USB packaging
 ```

@@ -178,6 +178,31 @@ public class EngineTests
     }
 
     [Fact]
+    public void ServicioInfo_EsCritico_DefaultTrue()
+    {
+        var svc = new ServicioInfo { Nombre = "Test", NombreCorto = "test" };
+        Assert.True(svc.EsCritico);
+    }
+
+    [Fact]
+    public void ServicioInfo_EsCritico_CanSetFalse()
+    {
+        var svc = new ServicioInfo { Nombre = "DiagTrack", NombreCorto = "diagtrack", EsCritico = false };
+        Assert.False(svc.EsCritico);
+    }
+
+    [Fact]
+    public void ServicioInfo_EsCritico_NoiseServicesCanBeFlagged()
+    {
+        var ruidoNames = new[] { "diagtrack", "xblauthmanager", "bthserv", "mapsbroker", "wmpnetworksvc" };
+        foreach (var name in ruidoNames)
+        {
+            var svc = new ServicioInfo { Nombre = name, NombreCorto = name, EsCritico = false };
+            Assert.False(svc.EsCritico, $"{name} should be non-critical");
+        }
+    }
+
+    [Fact]
     public void Analyze_HealthyNetwork_NoProblems()
     {
         var diag = new Diagnostico
