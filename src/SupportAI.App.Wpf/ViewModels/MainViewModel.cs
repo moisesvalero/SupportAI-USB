@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -38,10 +39,7 @@ public class MainViewModel : INotifyPropertyChanged
         ExportPdfCommand = new AsyncRelayCommand(async _ => await ExportPdfAsync());
         AnalyzeWithIaCommand = new AsyncRelayCommand(async _ => await AnalyzeWithIaAsync());
         RepairCommand = new RelayCommand(ExecuteRepair);
-        CancelRepairCommand = new RelayCommand(_ => CancelRepair());
-        DownloadModelCommand = new RelayCommand(_ => DownloadModel());
         AbrirAccionCommand = new RelayCommand(AbrirAccion);
-        ToggleExpandirCommand = new RelayCommand(ToggleExpandir);
         IniciarServicioCommand = new AsyncRelayCommand(async param => await IniciarServicio(param));
         OpenSettingsCommand = new RelayCommand(_ => AbrirSettings());
         DescargarModeloCommand = new AsyncRelayCommand(async _ => await DescargarModeloAsync());
@@ -68,10 +66,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ExportPdfCommand { get; }
     public ICommand AnalyzeWithIaCommand { get; }
     public ICommand RepairCommand { get; }
-    public ICommand CancelRepairCommand { get; }
-    public ICommand DownloadModelCommand { get; }
     public ICommand AbrirAccionCommand { get; }
-    public ICommand ToggleExpandirCommand { get; }
     public ICommand IniciarServicioCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand DescargarModeloCommand { get; }
@@ -93,16 +88,26 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (param is not string nombreCorto) return;
 
+        if (!System.Text.RegularExpressions.Regex.IsMatch(nombreCorto, @"^[a-zA-Z0-9._\- ]+$"))
+        {
+            StatusText = "❌ Nombre de servicio inválido.";
+            return;
+        }
+
         var confirm = MessageBox.Show(
             $"Iniciar el servicio '{nombreCorto}' requiere permisos de administrador.\n\nSe abrirá el diálogo de UAC de Windows.\n¿Continuar?",
             "Permisos elevados requeridos",
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes) return;
 
+        var script = $"Start-Service '{nombreCorto}'";
+        var bytes = System.Text.Encoding.Unicode.GetBytes(script);
+        var encoded = Convert.ToBase64String(bytes);
+
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"Start-Service '{nombreCorto}'\"",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}",
             UseShellExecute = true,
             Verb = "runas",
             CreateNoWindow = false
@@ -137,7 +142,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            StatusText = $"⏹️ Inicio de '{nombreCorto}' cancelado por el usuario.";
+            StatusText = $"⏹️ Iniciar de '{nombreCorto}' cancelado por el usuario.";
         }
         catch (Exception ex)
         {
@@ -158,6 +163,12 @@ public class MainViewModel : INotifyPropertyChanged
         if (param is not string target) return;
         try
         {
+            var whitelist = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "cleanmgr", "taskmgr", "shutdown", "windowsdefender:", "firewall.cpl",
+                "devmgmt.msc", "eventvwr.msc", "diskmgmt.msc", "powercfg.cpl"
+            };
+
             if (target.StartsWith("expand:"))
             {
                 ToggleExpandir(target["expand:".Length..]);
@@ -165,7 +176,11 @@ public class MainViewModel : INotifyPropertyChanged
             }
             if (target.StartsWith("ms-settings:"))
             {
-                Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+                var allowedSettings = new[] { "ms-settings:network-troubleshoot", "ms-settings:network-status" };
+                if (allowedSettings.Contains(target, StringComparer.OrdinalIgnoreCase))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+                }
                 return;
             }
             if (target == "shutdown")
@@ -182,17 +197,14 @@ public class MainViewModel : INotifyPropertyChanged
                     });
                 return;
             }
-            if (target == "taskmgr")
+            
+            if (whitelist.Contains(target))
             {
-                Process.Start(new ProcessStartInfo { FileName = "taskmgr.exe", UseShellExecute = true });
+                Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
                 return;
             }
-            if (target == "windowsdefender:")
-            {
-                Process.Start(new ProcessStartInfo { FileName = "windowsdefender:", UseShellExecute = true });
-                return;
-            }
-            Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+
+            Trace.WriteLine($"[MainViewModel] Bloqueado intento de abrir acción no segura: {target}");
         }
         catch (Exception ex)
         {
@@ -211,15 +223,8 @@ public class MainViewModel : INotifyPropertyChanged
     public int Puntuacion
     {
         get => _puntuacion;
-        set { _puntuacion = value; OnPropertyChanged(); OnPropertyChanged(nameof(ScoreColor)); OnPropertyChanged(nameof(ScoreLabel)); }
+        set { _puntuacion = value; OnPropertyChanged(); OnPropertyChanged(nameof(ScoreLabel)); }
     }
-
-    public string ScoreColor => Puntuacion switch
-    {
-        >= 80 => "#27ae60",
-        >= 50 => "#f39c12",
-        _ => "#e74c3c"
-    };
 
     public string ScoreLabel => Puntuacion switch
     {
@@ -259,8 +264,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool PuedeReparar => !_reparando;
 
-    public List<ModuloCheck> Modulos { get; set; } = [];
-    public List<Problema> Problemas { get; set; } = [];
+    public ObservableCollection<ModuloCheck> Modulos { get; } = [];
+    public ObservableCollection<Problema> Problemas { get; } = [];
     public List<IRepairAction> Repairs => RepairCatalog.All.ToList();
     public bool HayProblemas => Problemas.Count > 0;
     public bool TieneDatos => Puntuacion > 0;
@@ -327,18 +332,9 @@ public class MainViewModel : INotifyPropertyChanged
     public bool ModelListo => ModeloDescargado;
     private static bool ModeloDescargado => ModelDownloader.ModelExists;
 
-    private void DownloadModel()
+    private void RefreshModelStatus()
     {
-        RefreshModelStatus();
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://github.com/ggerganov/llama.cpp/releases/latest",
-                UseShellExecute = true
-            });
-        }
-        catch { }
+        ModelStatus = ModelDownloader.GetStatus();
     }
 
     private async Task DescargarModeloAsync()
@@ -370,11 +366,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             Descargando = false;
         }
-    }
-
-    private void RefreshModelStatus()
-    {
-        ModelStatus = ModelDownloader.GetStatus();
     }
 
     public async Task ScanAsync()
@@ -419,11 +410,22 @@ public class MainViewModel : INotifyPropertyChanged
             _diagnostico = _diagnostico with { Problemas = problemas, Puntuacion = puntuacion };
 
             Puntuacion = puntuacion;
-            Problemas = problemas;
-            Modulos = BuildModulos(_diagnostico);
+            
+            Problemas.Clear();
+            foreach (var p in problemas)
+                Problemas.Add(p);
+
+            Modulos.Clear();
+            foreach (var m in BuildModulos(_diagnostico))
+                Modulos.Add(m);
 
             ScanProgress = 100;
             StatusText = $"Diagnóstico completado. Puntuación: {Puntuacion}/100 ({ScoreLabel}). {Problemas.Count} problema(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Error al escanear: {ex.Message}";
+            Trace.WriteLine($"[MainViewModel] Scan error: {ex.Message}");
         }
         finally
         {
@@ -636,7 +638,7 @@ public class MainViewModel : INotifyPropertyChanged
         return File.Exists(path);
     }
 
-    public List<ChatMessage> ChatMessages { get; set; } = [];
+    public ObservableCollection<ChatMessage> ChatMessages { get; } = [];
     public string ChatInput
     {
         get => _chatInput;

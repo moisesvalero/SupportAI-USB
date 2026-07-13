@@ -340,11 +340,11 @@ public static class DiagnosticEngine
             });
         }
 
-        var puntuacion = CalcularPuntuacion(diag, problemas);
+        var puntuacion = CalcularPuntuacion(problemas);
         return (problemas, puntuacion);
     }
 
-    private static int CalcularPuntuacion(Diagnostico diag, List<Problema> problemas)
+    private static int CalcularPuntuacion(List<Problema> problemas)
     {
         var puntos = 100;
         foreach (var p in problemas)

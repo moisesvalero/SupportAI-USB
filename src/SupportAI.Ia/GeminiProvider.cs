@@ -19,7 +19,7 @@ public class GeminiProvider : ILlmProvider
 
     public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
     {
-        var url = $"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={_apiKey}";
+        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent";
 
         var contents = messages.Where(m => m.Role != "system").Select(m => new
         {
@@ -40,8 +40,9 @@ public class GeminiProvider : ILlmProvider
         {
             Content = JsonContent.Create(body)
         };
+        request.Headers.Add("x-goog-api-key", _apiKey);
 
-        var response = await _sharedHttp.SendAsync(request, ct);
+        using var response = await _sharedHttp.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync<GeminiResponse>(ct);
@@ -75,6 +76,7 @@ public class GeminiProvider : ILlmProvider
         HttpResponseMessage? response = null;
         for (int attempt = 0; attempt < 3; attempt++)
         {
+            response?.Dispose();
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = JsonContent.Create(body)
@@ -98,20 +100,23 @@ public class GeminiProvider : ILlmProvider
         if (response == null)
             throw new InvalidOperationException("No se pudo obtener respuesta de Gemini.");
 
-        response.EnsureSuccessStatusCode();
+        using (response)
+        {
+            response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadFromJsonAsync<GeminiResponse>(ct);
-        var text = json?.candidates?[0]?.content?.parts?[0]?.text;
-        if (string.IsNullOrWhiteSpace(text))
-            throw new InvalidOperationException("Respuesta vacía de Gemini");
+            var json = await response.Content.ReadFromJsonAsync<GeminiResponse>(ct);
+            var text = json?.candidates?[0]?.content?.parts?[0]?.text;
+            if (string.IsNullOrWhiteSpace(text))
+                throw new InvalidOperationException("Respuesta vacía de Gemini");
 
-        // Extraer JSON del texto (Gemini a veces pone markdown)
-        var jsonStart = text.IndexOf('{');
-        var jsonEnd = text.LastIndexOf('}');
-        if (jsonStart >= 0 && jsonEnd > jsonStart)
-            text = text[jsonStart..(jsonEnd + 1)];
+            // Extraer JSON del texto (Gemini a veces pone markdown)
+            var jsonStart = text.IndexOf('{');
+            var jsonEnd = text.LastIndexOf('}');
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+                text = text[jsonStart..(jsonEnd + 1)];
 
-        return OpenRouterProvider.ParseResponseStatic(text, Name);
+            return OpenRouterProvider.ParseResponseStatic(text, Name);
+        }
     }
 
     private static string BuildPrompt(Diagnostico diag)

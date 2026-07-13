@@ -11,7 +11,19 @@ public abstract class CommandRepair : IRepairAction
     public abstract string Comando { get; }
     public virtual bool RequiresElevation => false;
     protected virtual string FileName => "powershell.exe";
-    protected virtual string Arguments => $"-NoProfile -ExecutionPolicy Bypass -Command \"{Comando.Replace("\"", "\\\"")}\"";
+    protected virtual string Arguments
+    {
+        get
+        {
+            if (FileName.EndsWith("powershell.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                var bytes = System.Text.Encoding.Unicode.GetBytes(Comando);
+                var encoded = Convert.ToBase64String(bytes);
+                return $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}";
+            }
+            return Comando;
+        }
+    }
 
     public virtual async Task<RepairResult> ExecuteAsync(bool dryRun = false, CancellationToken ct = default)
     {
@@ -51,9 +63,12 @@ public abstract class CommandRepair : IRepairAction
         };
         using var process = new Process { StartInfo = psi };
         process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync(ct);
-        var error = await process.StandardError.ReadToEndAsync(ct);
+        var readOutputTask = process.StandardOutput.ReadToEndAsync(ct);
+        var readErrorTask = process.StandardError.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
+        
+        var output = await readOutputTask;
+        var error = await readErrorTask;
         return RepairResult.FromProcess(process.ExitCode, output, error);
     }
 

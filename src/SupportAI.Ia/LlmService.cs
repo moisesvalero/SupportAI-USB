@@ -52,7 +52,7 @@ public class LlmService
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 System.Diagnostics.Trace.WriteLine($"[LlmService] Error al analizar con {provider.Name}: {ex.Message}");
-                if (ct.IsCancellationRequested && (ex is OperationCanceledException || ex is TaskCanceledException))
+                if (ex is OperationCanceledException oce && oce.CancellationToken == ct)
                     throw;
             }
         }

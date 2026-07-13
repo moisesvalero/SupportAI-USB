@@ -33,3 +33,4 @@ tools/*.exe
 .*_KEY
 *_key.txt
 keys/
+settings.json
