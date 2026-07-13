@@ -8,19 +8,31 @@ public class PowerShellEngine
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = null
+        PropertyNameCaseInsensitive = true
     };
 
     public async Task<Diagnostico> CollectAllAsync(CancellationToken ct)
     {
         var script = BuildFullScript();
-        var json = await RunPowerShellAsync(script, ct);
-        if (string.IsNullOrWhiteSpace(json))
-            return new Diagnostico { GeneradoEn = DateTime.UtcNow };
+        try
+        {
+            var json = await RunPowerShellAsync(script, ct);
+            if (string.IsNullOrWhiteSpace(json))
+                return new Diagnostico { GeneradoEn = DateTime.UtcNow };
 
-        var diag = JsonSerializer.Deserialize<DiagnosticoRaw>(json, JsonOpts);
-        return MapToDiagnostico(diag);
+            var diag = JsonSerializer.Deserialize<DiagnosticoRaw>(json, JsonOpts);
+            return MapToDiagnostico(diag);
+        }
+        catch (JsonException ex)
+        {
+            Trace.WriteLine($"[PowerShellEngine] JSON Deserialization error: {ex.Message}");
+            return new Diagnostico { GeneradoEn = DateTime.UtcNow };
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"[PowerShellEngine] Error collecting info: {ex.Message}");
+            return new Diagnostico { GeneradoEn = DateTime.UtcNow };
+        }
     }
 
     private static string BuildFullScript()
@@ -162,12 +174,16 @@ $r | ConvertTo-Json -Depth 5
 """;
     }
 
+    private const int TimeoutSeconds = 90;
+
     private static async Task<string?> RunPowerShellAsync(string script, CancellationToken ct)
     {
+        var bytes = System.Text.Encoding.Unicode.GetBytes(script);
+        var encodedScript = Convert.ToBase64String(bytes);
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{script.Replace("\"", "\\\"")}\"",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {encodedScript}",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -181,7 +197,7 @@ $r | ConvertTo-Json -Depth 5
         var readErrorTask = process.StandardError.ReadToEndAsync(ct);
         var processExitTask = process.WaitForExitAsync(ct);
 
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(90), ct);
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds), ct);
 
         var completedTask = await Task.WhenAny(processExitTask, timeoutTask);
         if (completedTask == timeoutTask)
@@ -190,14 +206,19 @@ $r | ConvertTo-Json -Depth 5
             {
                 process.Kill(entireProcessTree: true);
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignorar errores al matar el proceso
+                Trace.WriteLine($"[PowerShellEngine] Error killing process: {ex.Message}");
             }
             return null;
         }
 
         var output = await readOutputTask;
+        var error = await readErrorTask;
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            Trace.WriteLine($"[PowerShellEngine] PowerShell Stderr: {error}");
+        }
         return string.IsNullOrEmpty(output) ? null : output.Trim();
     }
 
@@ -243,7 +264,8 @@ $r | ConvertTo-Json -Depth 5
                     } : null,
                     SO = raw.Hardware.So is { } s ? new OsInfo
                     {
-                        Caption = s.Caption ?? "", Version = s.Version ?? "", Build = s.Build ?? ""
+                        Caption = s.Caption ?? "", Version = s.Version ?? "", Build = s.Build ?? "",
+                        Instalado = s.Instalado, UltimoArranque = s.UltimoArranque
                     } : null,
                     Bateria = raw.Hardware.Bateria is { } bat ? new BatteryInfo
                     {

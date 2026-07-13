@@ -5,6 +5,8 @@ namespace SupportAI.Ia;
 
 public static class PrivacyFilter
 {
+    private static readonly Regex UsersPathRegex = new(@"c:\\users\\[^\\]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex SerialRegex = new(@"[A-Za-z0-9]{8,}", RegexOptions.Compiled);
     public static Diagnostico Anonymize(Diagnostico diag)
     {
         var hw = diag.Hardware;
@@ -75,7 +77,7 @@ public static class PrivacyFilter
         if (string.IsNullOrEmpty(text)) return "";
 
         // 1. Rutas de perfiles de usuario: C:\Users\<usuario>... -> C:\Users\[USER]...
-        text = Regex.Replace(text, @"(?i)c:\\users\\[^\\]+", @"C:\Users\[USER]");
+        text = UsersPathRegex.Replace(text, @"C:\Users\[USER]");
 
         // 2. Nombre del usuario actual suelto
         text = text.Replace(Environment.UserName, "[USER]", StringComparison.OrdinalIgnoreCase);
@@ -97,6 +99,6 @@ public static class PrivacyFilter
 
     private static string AnonymizeSerial(string value)
     {
-        return Regex.Replace(value, @"[A-Z0-9]{8,}", "[REDACTED]");
+        return SerialRegex.Replace(value, "[REDACTED]");
     }
 }

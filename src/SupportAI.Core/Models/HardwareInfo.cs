@@ -26,7 +26,8 @@ public record CpuInfo
 public record RamInfo
 {
     [JsonPropertyName("totalBytes")] public long TotalBytes { get; init; }
-    [JsonPropertyName("totalGB")] public double TotalGB => Math.Round(TotalBytes / 1073741824.0, 1);
+    private const double BytesPerGB = 1_073_741_824.0;
+    [JsonPropertyName("totalGB")] public double TotalGB => Math.Round(TotalBytes / BytesPerGB, 1);
 }
 
 public record GpuInfo
@@ -46,11 +47,12 @@ public record DiscoInfo
 
 public record DiscoLogicoInfo
 {
+    private const double BytesPerGB = 1_073_741_824.0;
     [JsonPropertyName("letra")] public string Letra { get; init; } = "";
     [JsonPropertyName("sizeBytes")] public long SizeBytes { get; init; }
     [JsonPropertyName("freeBytes")] public long FreeBytes { get; init; }
-    [JsonPropertyName("sizeGB")] public double SizeGB => Math.Round(SizeBytes / 1073741824.0, 1);
-    [JsonPropertyName("freeGB")] public double FreeGB => Math.Round(FreeBytes / 1073741824.0, 1);
+    [JsonPropertyName("sizeGB")] public double SizeGB => Math.Round(SizeBytes / BytesPerGB, 1);
+    [JsonPropertyName("freeGB")] public double FreeGB => Math.Round(FreeBytes / BytesPerGB, 1);
     [JsonPropertyName("usoPorcentaje")] public double UsoPorcentaje =>
         SizeBytes > 0 ? Math.Round((1.0 - (double)FreeBytes / SizeBytes) * 100, 1) : 0;
 }

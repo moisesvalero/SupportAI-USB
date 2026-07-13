@@ -72,7 +72,7 @@ public class RulesProvider : ILlmProvider
                 sb.AppendLine($"  **{p.Titulo}**");
                 sb.AppendLine($"  {p.Detalle}");
                 sb.AppendLine($"  Sugerencia: puedes usar la herramienta 'Liberar espacio' de Windows (cleanmgr.exe) o ejecutar la reparación 'Limpiar archivos temporales' desde la app.");
-                sb.AppendLine($"  También revisa la carpeta Descargas y Paperas de reciclaje.");
+                sb.AppendLine($"  También revisa la carpeta Descargas y Papelera de reciclaje.");
                 break;
 
             case "Windows" when p.Titulo.Contains("Servicios"):
