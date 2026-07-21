@@ -201,7 +201,7 @@ tests/
 
 ## 📋 Changelog
 
-### v1.2.1 (2026-07-21)
+### v1.4.1 (2026-07-21)
 - Fixed 404 (Not Found) errors in AI providers by updating models to robust generic defaults (`openrouter/free` and `gemini-3.5-flash`)
 - Refactored model names into clean constants for better maintainability
 
