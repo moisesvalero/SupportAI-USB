@@ -268,7 +268,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<Problema> Problemas { get; } = [];
     public List<IRepairAction> Repairs => RepairCatalog.All.ToList();
     public bool HayProblemas => Problemas.Count > 0;
-    public bool TieneDatos => Puntuacion > 0;
+    public bool TieneDatos => _diagnostico.Hardware != null;
     public List<ServicioInfo> ServiciosFallando => (_diagnostico.Windows?.ServiciosFallando ?? [])
         .Where(s => s.EsCritico && !string.IsNullOrWhiteSpace(s.PathName) && ServiceExecutableExists(s))
         .ToList();
@@ -432,6 +432,11 @@ public class MainViewModel : INotifyPropertyChanged
             timer.Stop();
             Escaneando = false;
             RefreshBindings();
+        }
+
+        if (TieneDatos)
+        {
+            await AnalyzeWithIaAsync();
         }
     }
 

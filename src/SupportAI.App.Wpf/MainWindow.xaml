@@ -1,4 +1,4 @@
-﻿<Window x:Class="SupportAI.App.Wpf.MainWindow"
+<Window x:Class="SupportAI.App.Wpf.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -330,12 +330,7 @@
                         <StackPanel>
                             <TextBlock Text="Análisis IA" FontSize="13" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,8"/>
                             <Separator Background="#edf2f7" Height="1" Margin="0,0,0,8"/>
-                            <Button Content="Analizar con IA" Command="{Binding AnalyzeWithIaCommand}"
-                                    FontSize="12" Padding="12,6" Background="#6c5ce7" Foreground="White"
-                                    BorderThickness="0" Cursor="Hand"
-                                    IsEnabled="{Binding PuedeAnalizarConIa}"
-                                    ToolTip="Inicia el análisis con IA y abre el chat interactivo"
-                                    HorizontalAlignment="Center" Width="160"/>
+
                             <TextBlock Text="{Binding IaProvider, StringFormat='Proveedor: {0}', TargetNullValue='Reglas offline'}" 
                                        FontSize="10" Foreground="#95a5a6" Margin="0,4,0,0"
                                        HorizontalAlignment="Center"/>
