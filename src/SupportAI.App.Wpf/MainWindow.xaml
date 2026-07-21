@@ -112,6 +112,8 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -126,11 +128,28 @@
                     <TextBlock Text="Asistente portátil de diagnóstico para Windows"
                                FontSize="11" Foreground="#8d99ae"/>
                 </StackPanel>
-                <Button Grid.Column="2" Content="⚙️" Command="{Binding OpenSettingsCommand}"
+
+                <!-- Update buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="🔄 Buscar actualizaciones" Command="{Binding CheckUpdatesCommand}"
+                            FontSize="11" Background="Transparent" Foreground="#8d99ae"
+                            BorderThickness="0" Cursor="Hand"
+                            ToolTip="Comprobar si hay una nueva versión"
+                            Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolVis}, ConverterParameter=invert}"/>
+
+                    <Button Content="{Binding UpdateVersion, StringFormat='⬇️ Actualizar a {0}'}" 
+                            Command="{Binding OpenUpdateUrlCommand}"
+                            FontSize="11" FontWeight="Bold" Background="#27ae60" Foreground="White"
+                            BorderThickness="0" Padding="12,6" Cursor="Hand"
+                            Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolVis}}"/>
+                </StackPanel>
+
+                <!-- Settings & Scan -->
+                <Button Grid.Column="4" Content="⚙️" Command="{Binding OpenSettingsCommand}"
                         FontSize="16" Background="Transparent" Foreground="#8d99ae"
                         BorderThickness="0" Cursor="Hand" Width="34" Height="34"
                         ToolTip="Configuración"/>
-                <Button Grid.Column="4" Content="▶ Escanear" Command="{Binding ScanCommand}"
+                <Button Grid.Column="6" Content="▶ Escanear" Command="{Binding ScanCommand}"
                         FontSize="13" FontWeight="SemiBold"
                         Background="#e94560" Foreground="White"
                         BorderThickness="0" Padding="20,8" Cursor="Hand"

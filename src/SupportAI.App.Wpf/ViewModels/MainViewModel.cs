@@ -44,8 +44,13 @@ public class MainViewModel : INotifyPropertyChanged
         OpenSettingsCommand = new RelayCommand(_ => AbrirSettings());
         DescargarModeloCommand = new AsyncRelayCommand(async _ => await DescargarModeloAsync());
         ChatSendCommand = new AsyncRelayCommand(async _ => await ChatSendAsync());
+        CheckUpdatesCommand = new AsyncRelayCommand(async _ => await CheckUpdatesAsync(true));
+        OpenUpdateUrlCommand = new RelayCommand(_ => OpenUpdateUrl());
+        
         StatusText = "Listo. Haz clic en [Escanear] para diagnosticar.";
         RefreshModelStatus();
+
+        _ = CheckUpdatesAsync(false);
 
         var timer = new System.Windows.Threading.DispatcherTimer
         {
@@ -71,6 +76,8 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand OpenSettingsCommand { get; }
     public ICommand DescargarModeloCommand { get; }
     public ICommand ChatSendCommand { get; }
+    public ICommand CheckUpdatesCommand { get; }
+    public ICommand OpenUpdateUrlCommand { get; }
 
     public string? ProblemaExpandidoId
     {
@@ -307,6 +314,27 @@ public class MainViewModel : INotifyPropertyChanged
     }
     public bool PuedeDescargar => !_descargando;
 
+    private bool _updateAvailable;
+    public bool UpdateAvailable
+    {
+        get => _updateAvailable;
+        set { _updateAvailable = value; OnPropertyChanged(); }
+    }
+    
+    private string _updateVersion = "";
+    public string UpdateVersion
+    {
+        get => _updateVersion;
+        set { _updateVersion = value; OnPropertyChanged(); }
+    }
+    
+    private string _updateUrl = "";
+    public string UpdateUrl
+    {
+        get => _updateUrl;
+        set { _updateUrl = value; OnPropertyChanged(); }
+    }
+
     public string IaProvider
     {
         get => _iaProvider;
@@ -335,6 +363,50 @@ public class MainViewModel : INotifyPropertyChanged
     private void RefreshModelStatus()
     {
         ModelStatus = ModelDownloader.GetStatus();
+    }
+
+    private async Task CheckUpdatesAsync(bool manual)
+    {
+        if (manual) StatusText = "Buscando actualizaciones...";
+        
+        var (available, version, url) = await UpdateService.CheckForUpdatesAsync();
+        
+        if (available && url != null)
+        {
+            UpdateAvailable = true;
+            UpdateVersion = version!;
+            UpdateUrl = url;
+            
+            if (manual)
+            {
+                StatusText = $"Nueva versión disponible: {version}";
+                var res = MessageBox.Show($"Hay una nueva versión disponible ({version}). ¿Deseas ir a la página de descargas?", "Actualización disponible", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (res == MessageBoxResult.Yes)
+                {
+                    OpenUpdateUrl();
+                }
+            }
+        }
+        else if (manual)
+        {
+            StatusText = "El programa está actualizado.";
+            MessageBox.Show("Estás usando la última versión de SupportAI USB.", "Actualizaciones", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void OpenUpdateUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(UpdateUrl))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = UpdateUrl, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"❌ Error al abrir enlace: {ex.Message}";
+            }
+        }
     }
 
     private async Task DescargarModeloAsync()
