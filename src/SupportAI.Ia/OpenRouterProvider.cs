@@ -17,11 +17,13 @@ public class OpenRouterProvider : ILlmProvider
     public string Name => "OpenRouter";
     public bool Disponible => !string.IsNullOrWhiteSpace(_apiKey);
 
+    private const string DefaultModel = "openrouter/free";
+
     public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
     {
         var body = new
         {
-            model = "google/gemini-2.5-flash:free",
+            model = DefaultModel,
             messages = messages.Select(m => new { role = m.Role, content = m.Text }).ToArray(),
             max_tokens = 1000,
             temperature = 0.3
@@ -50,7 +52,7 @@ public class OpenRouterProvider : ILlmProvider
         var prompt = BuildPrompt(diag);
         var body = new
         {
-            model = "google/gemini-2.5-flash:free",
+            model = DefaultModel,
             messages = new[]
             {
                 new { role = "system", content = "Eres un técnico experto en diagnóstico de Windows. Analiza los datos y responde SOLO con JSON." },

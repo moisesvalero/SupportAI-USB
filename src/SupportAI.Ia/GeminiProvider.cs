@@ -17,9 +17,11 @@ public class GeminiProvider : ILlmProvider
     public string Name => "Gemini (Google)";
     public bool Disponible => !string.IsNullOrWhiteSpace(_apiKey);
 
+    private const string DefaultModel = "gemini-3.5-flash";
+
     public async Task<string> ChatAsync(List<(string Role, string Text)> messages, CancellationToken ct = default)
     {
-        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent";
+        var url = $"https://generativelanguage.googleapis.com/v1/models/{DefaultModel}:generateContent";
 
         var contents = messages.Where(m => m.Role != "system").Select(m => new
         {
@@ -55,7 +57,7 @@ public class GeminiProvider : ILlmProvider
     public async Task<LlmResponse> AnalyzeAsync(Diagnostico diag, CancellationToken ct)
     {
         var prompt = BuildPrompt(diag);
-        var url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent";
+        var url = $"https://generativelanguage.googleapis.com/v1/models/{DefaultModel}:generateContent";
 
         var body = new
         {
