@@ -205,6 +205,11 @@ tests/
 - Fixed 404 (Not Found) errors in AI providers by updating models to robust generic defaults (`openrouter/free` and `gemini-3.5-flash`)
 - Refactored model names into clean constants for better maintainability
 
+### v1.4.0 (2026-07-21)
+- In-app update checker integrated with GitHub Releases
+- Optimized AI Chat flow starting automatically after scan
+- Improved system service filtering and critical score resilience
+
 ### v1.2.0 (2026-07-11)
 - Interactive AI chat — unified "Analizar con IA" + chat panel with persistent LLM conversation
 - Smart service filtering via `EsCritico` flag (33 noise services filtered automatically)
